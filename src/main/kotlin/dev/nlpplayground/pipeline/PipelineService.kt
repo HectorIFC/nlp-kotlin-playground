@@ -6,7 +6,7 @@ package dev.nlpplayground.pipeline
  *
  * The service is stateless — Pipelines live in `SessionStore`, not here.
  */
-internal class PipelineService(private val loader: PretrainedLoader = PretrainedLoader()) {
+internal class PipelineService(private val loader: PretrainedLoader = PretrainedLoader.bundled()) {
 
     fun availablePretrained(): List<String> = loader.list()
 

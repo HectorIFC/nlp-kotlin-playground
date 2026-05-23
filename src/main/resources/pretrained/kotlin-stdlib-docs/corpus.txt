@@ -1,0 +1,924 @@
+Returns an empty read-only list.  The returned list is serializable (JVM).
+
+Returns a new read-only list of given elements.  The returned list is serializable (JVM).
+
+Returns a new read-only list containing only the specified object [element].
+The returned list is serializable (JVM).
+
+Returns an empty read-only list.  The returned list is serializable (JVM).
+
+Returns an empty new [MutableList].
+
+Returns an empty new [ArrayList].
+
+Returns a new [MutableList] with the given elements.
+
+Returns a new [ArrayList] with the given elements.
+
+Returns a new read-only list either of single given element, if it is not null, or empty list if the element is null. The returned list is serializable (JVM).
+
+Returns a new read-only list only of those given elements, that are not null.  The returned list is serializable (JVM).
+
+Creates a new read-only list with the specified [size], where each element is calculated by calling the specified
+[init] function.
+The function [init] is called for each list element sequentially starting from the first one.
+It should return the value for a list element given its index.
+
+Creates a new mutable list with the specified [size], where each element is calculated by calling the specified
+[init] function.
+The function [init] is called for each list element sequentially starting from the first one.
+It should return the value for a list element given its index.
+
+Builds a new read-only [List] by populating a [MutableList] using the given [builderAction]
+and returning a read-only list with the same elements.
+The list passed as a receiver to the [builderAction] is valid only inside that function.
+Using it outside of the function produces an unspecified behavior.
+The returned list is serializable (JVM).
+
+Builds a new read-only [List] by populating a [MutableList] using the given [builderAction]
+and returning a read-only list with the same elements.
+The list passed as a receiver to the [builderAction] is valid only inside that function.
+Using it outside of the function produces an unspecified behavior.
+The returned list is serializable (JVM).
+[capacity] is used to hint the expected number of elements added in the [builderAction].
+
+Returns an [IntRange] of the valid indices for this collection.
+
+Returns the index of the last item in the list or -1 if the list is empty.
+
+Returns `true` if the collection is not empty.
+
+Returns `true` if this nullable collection is either null or empty.
+
+Returns this Collection if it's not `null` and the empty list otherwise.
+
+Returns this List if it's not `null` and the empty list otherwise.
+
+Returns this collection if it's not empty
+or the result of calling [defaultValue] function if the collection is empty.
+
+Checks if all elements in the specified collection are contained in this collection.
+Allows to overcome type-safety restriction of `containsAll` that requires to pass a collection of type `Collection<E>`.
+
+Returns a new list with the elements of this list randomly shuffled
+using the specified [random] instance as the source of randomness.
+
+Searches this list or its range for the provided [element] using the binary search algorithm.
+The list is expected to be sorted into ascending order according to the Comparable natural ordering of its elements,
+otherwise the result is undefined.
+If the list contains multiple elements equal to the specified [element], there is no guarantee which one will be found.
+`null` value is considered to be less than any non-null value.
+
+otherwise, the inverted insertion point `(-insertion point - 1)`.
+The insertion point is defined as the index at which the element should be inserted,
+so that the list (or the specified subrange of list) still remains sorted.
+
+Searches this list or its range for the provided [element] using the binary search algorithm.
+The list is expected to be sorted into ascending order according to the specified [comparator],
+otherwise the result is undefined.
+If the list contains multiple elements equal to the specified [element], there is no guarantee which one will be found.
+`null` value is considered to be less than any non-null value.
+
+otherwise, the inverted insertion point `(-insertion point - 1)`.
+The insertion point is defined as the index at which the element should be inserted,
+so that the list (or the specified subrange of list) still remains sorted according to the specified [comparator].
+
+Searches this list or its range for an element having the key returned by the specified [selector] function
+equal to the provided [key] value using the binary search algorithm.
+The list is expected to be sorted into ascending order according to the Comparable natural ordering of keys of its elements.
+otherwise the result is undefined.
+If the list contains multiple elements with the specified [key], there is no guarantee which one will be found.
+`null` value is considered to be less than any non-null value.
+
+otherwise, the inverted insertion point `(-insertion point - 1)`.
+The insertion point is defined as the index at which the element should be inserted,
+so that the list (or the specified subrange of list) still remains sorted.
+
+Searches this list or its range for an element for which the given [comparison] function returns zero using the binary search algorithm.
+The list is expected to be sorted so that the signs of the [comparison] function's return values ascend on the list elements,
+i.e. negative values come before zero and zeroes come before positive values.
+Otherwise, the result is undefined.
+If the list contains multiple elements for which [comparison] returns zero, there is no guarantee which one will be found.
+
+On the elements coming before the target element, the function must return negative values;
+on the elements coming after the target element, the function must return positive values.
+
+otherwise, the inverted insertion point `(-insertion point - 1)`.
+The insertion point is defined as the index at which the element should be inserted,
+so that the list (or the specified subrange of list) still remains sorted.
+
+Checks that `from` and `to` are in
+the range of [0..size] and throws an appropriate exception, if they aren't.
+
+In JVM if the size of [array] is bigger than [collectionSize], sets `array[collectionSize] = null`.
+In other platforms does nothing.
+Returns the given [array].
+
+Given an [iterator] function constructs a [Sequence] that returns values through the [Iterator]
+provided by that function.
+The values are evaluated lazily, and the sequence is potentially infinite.
+
+Creates a sequence that returns all elements from this iterator. The sequence is constrained to be iterated only once.
+
+Creates a sequence that returns the specified values.
+
+Returns an empty sequence.
+
+Returns this sequence if it's not `null` and the empty sequence otherwise.
+
+Returns a sequence that iterates through the elements either of this sequence
+or, if this sequence turns out to be empty, of the sequence returned by [defaultValue] function.
+
+Returns a sequence of all elements from all sequences in this sequence.
+The operation is _intermediate_ and _stateless_.
+
+Returns a sequence of all elements from all iterables in this sequence.
+The operation is _intermediate_ and _stateless_.
+
+Returns a pair of lists, where
+*first* list is built from the first values of each pair from this sequence,
+*second* list is built from the second values of each pair from this sequence.
+The operation is _terminal_.
+
+Returns a sequence that yields elements of this sequence randomly shuffled.
+Note that every iteration of the sequence returns elements in a different order.
+The operation is _intermediate_ and _stateful_.
+
+Returns a sequence that yields elements of this sequence randomly shuffled
+using the specified [random] instance as the source of randomness.
+Note that every iteration of the sequence returns elements in a different order.
+The operation is _intermediate_ and _stateful_.
+
+A sequence that returns the values from the underlying [sequence] that either match or do not match
+the specified [predicate].
+
+values for which the predicate returns `false` are returned
+
+A sequence which returns the results of applying the given [transformer] function to the values
+in the underlying [sequence].
+
+A sequence which returns the results of applying the given [transformer] function to the values
+in the underlying [sequence], where the transformer function takes the index of the value in the underlying
+sequence along with the value itself.
+
+A sequence which combines values from the underlying [sequence] with their indices and returns them as
+[IndexedValue] objects.
+
+A sequence which takes the values from two parallel underlying sequences, passes them to the given
+[transform] function and returns the values returned by that function. The sequence stops returning
+values as soon as one of the underlying sequences stops returning values.
+
+A sequence that supports drop(n) and take(n) operations
+
+A sequence that skips [startIndex] values from the underlying [sequence]
+and stops returning values right before [endIndex], i.e. stops at `endIndex - 1`
+
+A sequence that returns at most [count] values from the underlying [sequence], and stops returning values
+as soon as that count is reached.
+
+A sequence that returns values from the underlying [sequence] while the [predicate] function returns
+`true`, and stops returning values once the function returns `false` for the next element.
+
+A sequence that skips the specified number of values from the underlying [sequence] and returns
+all values after that.
+
+A sequence that skips the values from the underlying [sequence] while the given [predicate] returns `true` and returns
+all values after that.
+
+Returns a wrapper sequence that provides values of this sequence, but ensures it can be iterated only one time.
+The operation is _intermediate_ and _stateless_.
+[IllegalStateException] is thrown on iterating the returned sequence for the second time and the following times.
+
+Returns a sequence which invokes the function to calculate the next value on each iteration until the function returns `null`.
+The returned sequence is constrained to be iterated only once.
+
+Returns a sequence defined by the starting value [seed] and the function [nextFunction],
+which is invoked to calculate the next value based on the previous one on each iteration.
+The sequence produces values until it encounters first `null` value.
+If [seed] is `null`, an empty sequence is produced.
+The sequence can be iterated multiple times, each time starting with [seed].
+
+Returns a sequence defined by the function [seedFunction], which is invoked to produce the starting value,
+and the [nextFunction], which is invoked to calculate the next value based on the previous one on each iteration.
+The sequence produces values until it encounters first `null` value.
+If [seedFunction] returns `null`, an empty sequence is produced.
+The sequence can be iterated multiple times.
+
+Returns an empty read-only map of specified type.
+The returned map is serializable (JVM).
+
+Returns a new read-only map with the specified contents, given as a list of pairs
+where the first value is the key and the second is the value.
+If multiple pairs have the same key, the resulting map will contain the value from the last of those pairs.
+Entries of the map are iterated in the order they were specified.
+The returned map is serializable (JVM).
+
+Returns a new read-only map, mapping only the specified key to the
+specified value.
+The returned map is serializable (JVM).
+
+Returns an empty read-only map.
+The returned map is serializable (JVM).
+
+Returns an empty new [MutableMap].
+The returned map preserves the entry iteration order.
+
+Returns a new [MutableMap] with the specified contents, given as a list of pairs
+where the first component is the key and the second is the value.
+If multiple pairs have the same key, the resulting map will contain the value from the last of those pairs.
+Entries of the map are iterated in the order they were specified.
+
+Returns an empty new [HashMap].
+
+Returns a new [HashMap] with the specified contents, given as a list of pairs
+where the first component is the key and the second is the value.
+
+Returns an empty new [LinkedHashMap].
+
+Returns a new [LinkedHashMap] with the specified contents, given as a list of pairs
+where the first component is the key and the second is the value.
+If multiple pairs have the same key, the resulting map will contain the value from the last of those pairs.
+Entries of the map are iterated in the order they were specified.
+
+Builds a new read-only [Map] by populating a [MutableMap] using the given [builderAction]
+and returning a read-only map with the same key-value pairs.
+The map passed as a receiver to the [builderAction] is valid only inside that function.
+Using it outside of the function produces an unspecified behavior.
+Entries of the map are iterated in the order they were added by the [builderAction].
+The returned map is serializable (JVM).
+
+Builds a new read-only [Map] by populating a [MutableMap] using the given [builderAction]
+and returning a read-only map with the same key-value pairs.
+The map passed as a receiver to the [builderAction] is valid only inside that function.
+Using it outside of the function produces an unspecified behavior.
+[capacity] is used to hint the expected number of pairs added in the [builderAction].
+Entries of the map are iterated in the order they were added by the [builderAction].
+The returned map is serializable (JVM).
+
+Calculate the initial capacity of a map.
+
+Returns `true` if this map is not empty.
+
+Returns `true` if this nullable map is either null or empty.
+
+Returns the [Map] if its not `null`, or the empty [Map] otherwise.
+
+Returns this map if it's not empty
+or the result of calling [defaultValue] function if the map is empty.
+
+Checks if the map contains the given key.
+This method allows to use the `x in map` syntax for checking whether an object is contained in the map.
+
+Returns the value corresponding to the given [key], or `null` if such a key is not present in the map.
+
+Allows to use the index operator for storing values in a mutable map.
+
+Returns `true` if the map contains the specified [key].
+Allows to overcome type-safety restriction of `containsKey` that requires to pass a key of type `K`.
+
+Returns `true` if the map maps one or more keys to the specified [value].
+Allows to overcome type-safety restriction of `containsValue` that requires to pass a value of type `V`.
+
+Removes the specified key and its corresponding value from this map.
+
+Allows to overcome type-safety restriction of `remove` that requires to pass a key of type `K`.
+
+Returns the key component of the map entry.
+This method allows to use destructuring declarations when working with maps, for example:
+```
+for ((key, value) in map) {
+    // do something with the key and the value
+}
+```
+
+Returns the value component of the map entry.
+This method allows to use destructuring declarations when working with maps, for example:
+```
+for ((key, value) in map) {
+    // do something with the key and the value
+}
+```
+
+Converts entry to [Pair] with key being first component and value being second.
+
+Returns the value for the given [key] if the value is present and not `null`.
+Otherwise, returns the result of the [defaultValue] function.
+
+Returns the value for the given [key] or throws an exception if there is no such key in the map.
+If the map was created by [withDefault], resorts to its `defaultValue` provider function
+instead of throwing an exception.
+
+no implicit default value was provided for that map.
+
+Returns the value for the given [key] if the value is present and not `null`.
+Otherwise, calls the [defaultValue] function,
+puts its result into the map under the given key and returns the call result.
+Note that the operation is not guaranteed to be atomic if the map is being modified concurrently.
+
+Returns an [Iterator] over the entries in the [Map].
+
+Returns a [MutableIterator] over the mutable entries in the [MutableMap].
+
+Populates the given [destination] map with entries having the keys of this map and the values obtained
+by applying the [transform] function to each entry in this [Map].
+
+Populates the given [destination] map with entries having the keys obtained
+by applying the [transform] function to each entry in this [Map] and the values of this map.
+In case if any two entries are mapped to the equal keys, the value of the latter one will overwrite
+the value associated with the former one.
+
+Puts all the given [pairs] into this [MutableMap] with the first component in the pair being the key and the second the value.
+
+Puts all the elements of the given collection into this [MutableMap] with the first component in the pair being the key and the second the value.
+
+Puts all the elements of the given sequence into this [MutableMap] with the first component in the pair being the key and the second the value.
+
+Returns a new map with entries having the keys of this map and the values obtained by applying the [transform]
+function to each entry in this [Map].
+The returned map preserves the entry iteration order of the original map.
+
+Returns a new Map with entries having the keys obtained by applying the [transform] function to each entry in this
+[Map] and the values of this map.
+In case if any two entries are mapped to the equal keys, the value of the latter one will overwrite
+the value associated with the former one.
+The returned map preserves the entry iteration order of the original map.
+
+Returns a map containing all key-value pairs with keys matching the given [predicate].
+The returned map preserves the entry iteration order of the original map.
+
+Returns a map containing all key-value pairs with values matching the given [predicate].
+The returned map preserves the entry iteration order of the original map.
+ @sample samples.collections.Maps.Filtering.filterValues
+
+Appends all entries matching the given [predicate] into the mutable map given as [destination] parameter.
+
+Returns a new map containing all key-value pairs matching the given [predicate].
+The returned map preserves the entry iteration order of the original map.
+
+Appends all entries not matching the given [predicate] into the given [destination].
+
+Returns a new map containing all key-value pairs not matching the given [predicate].
+The returned map preserves the entry iteration order of the original map.
+
+Returns a new map containing all key-value pairs from the given collection of pairs.
+The returned map preserves the entry iteration order of the original collection.
+If any of two pairs would have the same key the last one gets added to the map.
+
+Populates and returns the [destination] mutable map with key-value pairs from the given collection of pairs.
+
+Returns a new map containing all key-value pairs from the given array of pairs.
+The returned map preserves the entry iteration order of the original array.
+If any of two pairs would have the same key the last one gets added to the map.
+
+Populates and returns the [destination] mutable map with key-value pairs from the given array of pairs.
+
+Returns a new map containing all key-value pairs from the given sequence of pairs.
+The returned map preserves the entry iteration order of the original sequence.
+If any of two pairs would have the same key the last one gets added to the map.
+
+Populates and returns the [destination] mutable map with key-value pairs from the given sequence of pairs.
+
+Returns a new read-only map containing all key-value pairs from the original map.
+The returned map preserves the entry iteration order of the original map.
+
+Returns a new mutable map containing all key-value pairs from the original map.
+The returned map preserves the entry iteration order of the original map.
+
+Populates and returns the [destination] mutable map with key-value pairs from the given map.
+
+Creates a new read-only map by replacing or adding an entry to this map from a given key-value [pair].
+The returned map preserves the entry iteration order of the original map.
+The [pair] is iterated in the end if it has a unique key.
+
+Creates a new read-only map by replacing or adding entries to this map from a given collection of key-value [pairs].
+The returned map preserves the entry iteration order of the original map.
+Those [pairs] with unique keys are iterated in the end in the order of [pairs] collection.
+
+Creates a new read-only map by replacing or adding entries to this map from a given array of key-value [pairs].
+The returned map preserves the entry iteration order of the original map.
+Those [pairs] with unique keys are iterated in the end in the order of [pairs] array.
+
+Creates a new read-only map by replacing or adding entries to this map from a given sequence of key-value [pairs].
+The returned map preserves the entry iteration order of the original map.
+Those [pairs] with unique keys are iterated in the end in the order of [pairs] sequence.
+
+Creates a new read-only map by replacing or adding entries to this map from another [map].
+The returned map preserves the entry iteration order of the original map.
+Those entries of another [map] that are missing in this map are iterated in the end in the order of that [map].
+
+Appends or replaces the given [pair] in this mutable map.
+
+Appends or replaces all pairs from the given collection of [pairs] in this mutable map.
+
+Appends or replaces all pairs from the given array of [pairs] in this mutable map.
+
+Appends or replaces all pairs from the given sequence of [pairs] in this mutable map.
+
+Appends or replaces all entries from the given [map] in this mutable map.
+
+Returns a map containing all entries of the original map except the entry with the given [key].
+The returned map preserves the entry iteration order of the original map.
+
+Returns a map containing all entries of the original map except those entries
+the keys of which are contained in the given [keys] collection.
+The returned map preserves the entry iteration order of the original map.
+
+Returns a map containing all entries of the original map except those entries
+the keys of which are contained in the given [keys] array.
+The returned map preserves the entry iteration order of the original map.
+
+Returns a map containing all entries of the original map except those entries
+the keys of which are contained in the given [keys] sequence.
+The returned map preserves the entry iteration order of the original map.
+
+Removes the entry with the given [key] from this mutable map.
+
+Removes all entries the keys of which are contained in the given [keys] collection from this mutable map.
+
+Removes all entries the keys of which are contained in the given [keys] array from this mutable map.
+
+Removes all entries from the keys of which are contained in the given [keys] sequence from this mutable map.
+
+Returns an empty read-only set.  The returned set is serializable (JVM).
+
+Returns a new read-only set with the given elements.
+Elements of the set are iterated in the order they were specified.
+The returned set is serializable (JVM).
+
+Returns a new read-only set containing only the specified object [element].
+The returned set is serializable (JVM).
+
+Returns an empty read-only set.  The returned set is serializable (JVM).
+
+Returns an empty new [MutableSet].
+The returned set preserves the element iteration order.
+
+Returns a new [MutableSet] with the given elements.
+Elements of the set are iterated in the order they were specified.
+
+Returns an empty new [HashSet].
+
+Returns a new [HashSet] with the given elements.
+
+Returns an empty new [LinkedHashSet].
+
+Returns a new [LinkedHashSet] with the given elements.
+Elements of the set are iterated in the order they were specified.
+
+Returns a new read-only set either with single given element, if it is not null, or empty set if the element is null.
+The returned set is serializable (JVM).
+
+Returns a new read-only set only with those given elements, that are not null.
+Elements of the set are iterated in the order they were specified.
+The returned set is serializable (JVM).
+
+Builds a new read-only [Set] by populating a [MutableSet] using the given [builderAction]
+and returning a read-only set with the same elements.
+The set passed as a receiver to the [builderAction] is valid only inside that function.
+Using it outside of the function produces an unspecified behavior.
+Elements of the set are iterated in the order they were added by the [builderAction].
+The returned set is serializable (JVM).
+
+Builds a new read-only [Set] by populating a [MutableSet] using the given [builderAction]
+and returning a read-only set with the same elements.
+The set passed as a receiver to the [builderAction] is valid only inside that function.
+Using it outside of the function produces an unspecified behavior.
+[capacity] is used to hint the expected number of elements added in the [builderAction].
+Elements of the set are iterated in the order they were added by the [builderAction].
+The returned set is serializable (JVM).
+
+Returns this Set if it's not `null` and the empty set otherwise.
+
+Given an [iterator] function constructs an [Iterable] instance that returns values through the [Iterator]
+provided by that function.
+
+A wrapper over another [Iterable] (or any other object that can produce an [Iterator]) that returns
+an indexing iterator.
+
+Returns the size of this iterable if it is known, or `null` otherwise.
+
+Returns the size of this iterable if it is known, or the specified [default] value otherwise.
+
+Returns a single list of all elements from all collections in the given collection.
+
+Returns a pair of lists, where
+*first* list is built from the first values of each pair from this collection,
+*second* list is built from the second values of each pair from this collection.
+
+Returns a copy of this string converted to upper case using the rules of the default locale.
+
+Returns a copy of this string converted to upper case using Unicode mapping rules of the invariant locale.
+This function supports one-to-many and many-to-one character mapping,
+thus the length of the returned string can be different from the length of the original string.
+
+Returns a copy of this string converted to lower case using the rules of the default locale.
+
+Returns a copy of this string converted to lower case using Unicode mapping rules of the invariant locale.
+This function supports one-to-many and many-to-one character mapping,
+thus the length of the returned string can be different from the length of the original string.
+
+Returns a copy of this string having its first letter titlecased using the rules of the default locale,
+or the original string if it's empty or already starts with a title case letter.
+The title case of a character is usually the same as its upper case with several exceptions.
+The particular list of characters with the special title case form depends on the underlying platform.
+
+Returns a copy of this string having its first letter lowercased using the rules of the default locale,
+or the original string if it's empty or already starts with a lower case letter.
+
+Returns a subsequence of this char sequence having leading and trailing characters matching the [predicate] removed.
+
+Returns a string having leading and trailing characters matching the [predicate] removed.
+
+Returns a subsequence of this char sequence having leading characters matching the [predicate] removed.
+
+Returns a string having leading characters matching the [predicate] removed.
+
+Returns a subsequence of this char sequence having trailing characters matching the [predicate] removed.
+
+Returns a string having trailing characters matching the [predicate] removed.
+
+Returns a subsequence of this char sequence having leading and trailing characters from the [chars] array removed.
+
+Returns a string having leading and trailing characters from the [chars] array removed.
+
+Returns a subsequence of this char sequence having leading characters from the [chars] array removed.
+
+Returns a string having leading characters from the [chars] array removed.
+
+Returns a subsequence of this char sequence having trailing characters from the [chars] array removed.
+
+Returns a string having trailing characters from the [chars] array removed.
+
+Returns a subsequence of this char sequence having leading and trailing whitespace removed.
+
+Returns a string having leading and trailing whitespace removed.
+
+Returns a subsequence of this char sequence having leading whitespace removed.
+
+Returns a string having leading whitespace removed.
+
+Returns a subsequence of this char sequence having trailing whitespace removed.
+
+Returns a string having trailing whitespace removed.
+
+Returns a char sequence with content of this char sequence padded at the beginning
+to the specified [length] with the specified character or space.
+
+
+
+as are necessary to reach that length.
+
+Pads the string to the specified [length] at the beginning with the specified character or space.
+
+
+
+as are necessary to reach that length.
+
+Returns a char sequence with content of this char sequence padded at the end
+to the specified [length] with the specified character or space.
+
+
+
+as are necessary to reach that length.
+
+Pads the string to the specified [length] at the end with the specified character or space.
+
+
+
+as are necessary to reach that length.
+
+Returns `true` if this nullable char sequence is either `null` or empty.
+
+Returns `true` if this char sequence is empty (contains no characters).
+
+Returns `true` if this char sequence is not empty.
+
+Returns `true` if this char sequence is empty or consists solely of whitespace characters according to [Char.isWhitespace].
+
+Returns `true` if this char sequence is not empty and contains some characters except whitespace characters.
+
+Returns `true` if this nullable char sequence is either `null` or empty or consists solely of whitespace characters.
+
+Iterator for characters of the given char sequence.
+
+Returns the string if it is not `null`, or the empty string otherwise.
+
+Returns this char sequence if it's not empty
+or the result of calling [defaultValue] function if the char sequence is empty.
+
+Returns this char sequence if it is not empty and doesn't consist solely of whitespace characters,
+or the result of calling [defaultValue] function otherwise.
+
+Returns the range of valid character indices for this char sequence.
+
+Returns the index of the last character in the char sequence or -1 if it is empty.
+
+Returns `true` if this CharSequence has Unicode surrogate pair at the specified [index].
+
+Returns a substring specified by the given [range] of indices.
+
+Returns a subsequence of this char sequence specified by the given [range] of indices.
+
+Returns a subsequence of this char sequence.
+This extension is chosen only for invocation with old-named parameters.
+Replace parameter names with the same as those of [CharSequence.subSequence].
+
+Returns a substring of chars from a range of this char sequence starting at the [startIndex] and ending right before the [endIndex].
+
+Returns a substring of chars at indices from the specified [range] of this char sequence.
+
+Returns a substring before the first occurrence of [delimiter].
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Returns a substring before the first occurrence of [delimiter].
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Returns a substring after the first occurrence of [delimiter].
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Returns a substring after the first occurrence of [delimiter].
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Returns a substring before the last occurrence of [delimiter].
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Returns a substring before the last occurrence of [delimiter].
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Returns a substring after the last occurrence of [delimiter].
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Returns a substring after the last occurrence of [delimiter].
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Returns a char sequence with content of this char sequence where its part at the given range
+is replaced with the [replacement] char sequence.
+
+Replaces the part of the string at the given range with the [replacement] char sequence.
+
+Returns a char sequence with content of this char sequence where its part at the given [range]
+is replaced with the [replacement] char sequence.
+The end index of the [range] is included in the part to be replaced.
+
+Replace the part of string at the given [range] with the [replacement] string.
+The end index of the [range] is included in the part to be replaced.
+
+Returns a char sequence with content of this char sequence where its part at the given range is removed.
+
+
+[endIndex] is not included in the removed part.
+
+Removes the part of a string at a given range.
+
+
+ [endIndex] is not included in the removed part.
+
+Returns a char sequence with content of this char sequence where its part at the given [range] is removed.
+The end index of the [range] is included in the removed part.
+
+Removes the part of a string at the given [range].
+The end index of the [range] is included in the removed part.
+
+If this char sequence starts with the given [prefix], returns a new char sequence
+with the prefix removed. Otherwise, returns a new char sequence with the same characters.
+
+If this string starts with the given [prefix], returns a copy of this string
+with the prefix removed. Otherwise, returns this string.
+
+If this char sequence ends with the given [suffix], returns a new char sequence
+with the suffix removed. Otherwise, returns a new char sequence with the same characters.
+
+If this string ends with the given [suffix], returns a copy of this string
+with the suffix removed. Otherwise, returns this string.
+
+When this char sequence starts with the given [prefix] and ends with the given [suffix],
+returns a new char sequence having both the given [prefix] and [suffix] removed.
+Otherwise, returns a new char sequence with the same characters.
+
+Removes from a string both the given [prefix] and [suffix] if and only if
+it starts with the [prefix] and ends with the [suffix].
+Otherwise, returns this string unchanged.
+
+When this char sequence starts with and ends with the given [delimiter],
+returns a new char sequence having this [delimiter] removed both from the start and end.
+Otherwise, returns a new char sequence with the same characters.
+
+Removes the given [delimiter] string from both the start and the end of this string
+if and only if it starts with and ends with the [delimiter].
+Otherwise, returns this string unchanged.
+
+Replace part of string before the first occurrence of given delimiter with the [replacement] string.
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Replace part of string before the first occurrence of given delimiter with the [replacement] string.
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Replace part of string after the first occurrence of given delimiter with the [replacement] string.
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Replace part of string after the first occurrence of given delimiter with the [replacement] string.
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Replace part of string after the last occurrence of given delimiter with the [replacement] string.
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Replace part of string after the last occurrence of given delimiter with the [replacement] string.
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Replace part of string before the last occurrence of given delimiter with the [replacement] string.
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Replace part of string before the last occurrence of given delimiter with the [replacement] string.
+If the string does not contain the delimiter, returns [missingDelimiterValue] which defaults to the original string.
+
+Returns a new string obtained by replacing each substring of this char sequence that matches the given regular expression
+with the given [replacement].
+The [replacement] can consist of any combination of literal text and $-substitutions. To treat the replacement string
+literally escape it with the [kotlin.text.Regex.Companion.escapeReplacement] method.
+
+Returns a new string obtained by replacing each substring of this char sequence that matches the given regular expression
+with the result of the given function [transform] that takes [MatchResult] and returns a string to be used as a
+replacement for that match.
+
+Replaces the first occurrence of the given regular expression [regex] in this char sequence with specified [replacement] expression.
+
+Returns a copy of this string having its first character replaced with the result of the specified [transform],
+or the original string if it's empty.
+
+Returns a copy of this string having its first character replaced with the result of the specified [transform],
+or the original string if it's empty.
+
+Returns `true` if this char sequence matches the given regular expression.
+
+Implementation of [regionMatches] for CharSequences.
+Invoked when it's already known that arguments are not Strings, so that no additional type checks are performed.
+
+Returns `true` if this char sequence starts with the specified character.
+
+Returns `true` if this char sequence ends with the specified character.
+
+Returns `true` if this char sequence starts with the specified prefix.
+
+Returns `true` if a substring of this char sequence starting at the specified offset [startIndex] starts with the specified prefix.
+
+Returns `true` if this char sequence ends with the specified suffix.
+
+Returns the longest string `prefix` such that this char sequence and [other] char sequence both start with this prefix,
+taking care not to split surrogate pairs.
+If this and [other] have no common prefix, returns the empty string.
+
+Returns the longest string `suffix` such that this char sequence and [other] char sequence both end with this suffix,
+taking care not to split surrogate pairs.
+If this and [other] have no common suffix, returns the empty string.
+
+Finds the index of the first occurrence of any of the specified [chars] in this char sequence,
+starting from the specified [startIndex] and optionally ignoring the case.
+
+Finds the index of the last occurrence of any of the specified [chars] in this char sequence,
+starting from the specified [startIndex] and optionally ignoring the case.
+
+Finds the first occurrence of any of the specified [strings] in this char sequence,
+starting from the specified [startIndex] and optionally ignoring the case.
+
+
+or `null` if none of [strings] are found.
+To avoid ambiguous results when strings in [strings] have characters in common, this method proceeds from
+the beginning to the end of this string, and finds at each position the first element in [strings]
+that matches this string at that position.
+
+Finds the last occurrence of any of the specified [strings] in this char sequence,
+starting from the specified [startIndex] and optionally ignoring the case.
+
+
+
+To avoid ambiguous results when strings in [strings] have characters in common, this method proceeds from
+the end toward the beginning of this string, and finds at each position the first element in [strings]
+that matches this string at that position.
+
+Finds the index of the first occurrence of any of the specified [strings] in this char sequence,
+starting from the specified [startIndex] and optionally ignoring the case.
+
+
+To avoid ambiguous results when strings in [strings] have characters in common, this method proceeds from
+the beginning to the end of this string, and finds at each position the first element in [strings]
+that matches this string at that position.
+
+Finds the index of the last occurrence of any of the specified [strings] in this char sequence,
+starting from the specified [startIndex] and optionally ignoring the case.
+
+
+
+To avoid ambiguous results when strings in [strings] have characters in common, this method proceeds from
+the end toward the beginning of this string, and finds at each position the first element in [strings]
+that matches this string at that position.
+
+Returns the index within this string of the first occurrence of the specified character, starting from the specified [startIndex].
+
+Returns the index within this char sequence of the first occurrence of the specified [string],
+starting from the specified [startIndex].
+
+Returns the index within this char sequence of the last occurrence of the specified character,
+starting from the specified [startIndex].
+
+Returns the index within this char sequence of the last occurrence of the specified [string],
+starting from the specified [startIndex].
+
+Returns `true` if this char sequence contains the specified [other] sequence of characters as a substring.
+
+Returns `true` if this char sequence contains the specified character [char].
+
+Returns `true` if this char sequence contains at least one match of the specified regular expression [regex].
+
+Returns a sequence of index ranges of substrings in this char sequence around occurrences of the specified [delimiters].
+
+
+ No range having its start value less than [startIndex] is returned.
+ [startIndex] is coerced to be non-negative and not greater than length of this string.
+
+Returns a sequence of index ranges of substrings in this char sequence around occurrences of the specified [delimiters].
+
+
+ No range having its start value less than [startIndex] is returned.
+ [startIndex] is coerced to be non-negative and not greater than length of this string.
+
+
+To avoid ambiguous results when strings in [delimiters] have characters in common, this method proceeds from
+the beginning to the end of this string, and finds at each position the first element in [delimiters]
+that matches this string at that position.
+
+Splits this char sequence to a sequence of strings around occurrences of the specified [delimiters].
+
+
+
+To avoid ambiguous results when strings in [delimiters] have characters in common, this method proceeds from
+the beginning to the end of this string, and finds at each position the first element in [delimiters]
+that matches this string at that position.
+
+Splits this char sequence to a list of strings around occurrences of the specified [delimiters].
+
+
+
+To avoid ambiguous results when strings in [delimiters] have characters in common, this method proceeds from
+the beginning to the end of this string, and matches at each position the first element in [delimiters]
+that is equal to a delimiter in this instance at that position.
+
+Splits this char sequence to a sequence of strings around occurrences of the specified [delimiters].
+
+Splits this char sequence to a list of strings around occurrences of the specified [delimiters].
+
+Splits this char sequence to a list of strings around occurrences of the specified [delimiter].
+This is specialized version of split which receives single non-empty delimiter and offers better performance
+
+Splits this char sequence to a list of strings around matches of the given regular expression.
+
+Zero by default means no limit is set.
+
+Splits this char sequence to a sequence of strings around matches of the given regular expression.
+
+Zero by default means no limit is set.
+
+Splits this char sequence to a sequence of lines delimited by any of the following character sequences: CRLF, LF or CR.
+The lines returned do not include terminating line separators.
+
+Splits this char sequence to a list of lines delimited by any of the following character sequences: CRLF, LF or CR.
+The lines returned do not include terminating line separators.
+
+Returns `true` if the contents of this char sequence are equal to the contents of the specified [other],
+i.e. both char sequences contain the same number of the same characters in the same order.
+
+Returns `true` if the contents of this char sequence are equal to the contents of the specified [other], optionally ignoring case difference.
+
+Returns `true` if the content of this string is equal to the word "true", `false` if it is equal to "false",
+and throws an exception otherwise.
+There is also a lenient version of the function available on nullable String, [String?.toBoolean].
+Note that this function is case-sensitive.
+
+Returns `true` if the content of this string is equal to the word "true", `false` if it is equal to "false",
+and `null` otherwise.
+There is also a lenient version of the function available on nullable String, [String?.toBoolean].
+Note that this function is case-sensitive.
+
+Represents a value with lazy initialization.
+To create an instance of [Lazy] use the [lazy] function.
+
+Gets the lazily initialized value of the current Lazy instance.
+Once the value was initialized it must not change during the rest of lifetime of this Lazy instance.
+
+Returns `true` if a value for this Lazy instance has been already initialized, and `false` otherwise.
+Once this function has returned `true` it stays `true` for the rest of lifetime of this Lazy instance.
+
+Creates a new instance of the [Lazy] that is already initialized with the specified [value].
+
+An extension to delegate a read-only property of type [T] to an instance of [Lazy].
+This extension allows to use instances of Lazy for property delegation:
+`val property: String by lazy { initializer }`
+
+Specifies how a [Lazy] instance synchronizes initialization among multiple threads.
+
+Locks are used to ensure that only a single thread can initialize the [Lazy] instance.
+
+Initializer function can be called several times on concurrent access to uninitialized [Lazy] instance value,
+but only the first returned value will be used as the value of [Lazy] instance.
+
+No locks are used to synchronize an access to the [Lazy] instance value; if the instance is accessed from multiple threads, its behavior is undefined.
+This mode should not be used unless the [Lazy] instance is guaranteed never to be initialized from more than one thread.

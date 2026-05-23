@@ -69,3 +69,32 @@ ktlint {
 tasks.withType<Test> {
     useJUnitPlatform()
 }
+
+// ----------------------------------------------------------------------
+// Pretrainer: tooling source set used only at dev time to regenerate the
+// committed `pretrained/*` artifacts. Kept out of the production JAR.
+// Run with: ./gradlew runPretrain
+// ----------------------------------------------------------------------
+
+sourceSets {
+    create("pretrainer") {
+        kotlin.srcDir("src/pretrainer/kotlin")
+        compileClasspath += sourceSets["main"].output
+        runtimeClasspath += sourceSets["main"].output
+    }
+}
+
+configurations {
+    named("pretrainerImplementation") { extendsFrom(configurations.implementation.get()) }
+    named("pretrainerRuntimeOnly") { extendsFrom(configurations.runtimeOnly.get()) }
+}
+
+tasks.register<JavaExec>("runPretrain") {
+    group = "playground"
+    description = "Regenerates the bundled pre-trained corpora (Alice, Shakespeare, Kotlin stdlib KDocs)."
+    classpath = sourceSets["pretrainer"].runtimeClasspath
+    mainClass.set("dev.nlpplayground.pretrainer.PretrainerKt")
+    // Default: write into the canonical resources/pretrained dir; override with -PoutDir=... if needed.
+    val outDir = (project.findProperty("outDir") as String?) ?: "src/main/resources/pretrained"
+    args(outDir)
+}

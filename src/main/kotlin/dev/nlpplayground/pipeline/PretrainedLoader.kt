@@ -27,11 +27,22 @@ import java.nio.file.StandardCopyOption
 internal class PretrainedLoader(
     /**
      * Names of pre-trained corpora available on the classpath. Hard-coded to
-     * what Phase 4 will ship; falsely listing one that has no resources yet
-     * would surface as a `NoSuchPretrainedException` at load time.
+     * what Phase 4 ships; falsely listing one without resources surfaces as
+     * a `NoSuchPretrainedException` at load time.
      */
     val available: List<String> = emptyList(),
 ) {
+
+    internal companion object {
+        /** Names that match the directories committed under `resources/pretrained/`. */
+        val BUNDLED_NAMES: List<String> = listOf(
+            "alice-in-wonderland",
+            "shakespeare-sonnets",
+            "kotlin-stdlib-docs",
+        )
+
+        fun bundled(): PretrainedLoader = PretrainedLoader(available = BUNDLED_NAMES)
+    }
 
     fun list(): List<String> = available
 

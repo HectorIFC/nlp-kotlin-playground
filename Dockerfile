@@ -25,7 +25,7 @@ LABEL org.opencontainers.image.title="nlp-kotlin-playground"
 LABEL org.opencontainers.image.description="Interactive playground demonstrating the Tessera + Mosaic NLP pipeline in Kotlin."
 LABEL org.opencontainers.image.source="https://github.com/HectorIFC/nlp-kotlin-playground"
 LABEL org.opencontainers.image.licenses="MIT"
-LABEL org.opencontainers.image.version="0.0.2"
+LABEL org.opencontainers.image.version="0.0.3"
 
 # wget is needed by the HEALTHCHECK below; jre-jammy doesn't ship with it.
 RUN apt-get update \

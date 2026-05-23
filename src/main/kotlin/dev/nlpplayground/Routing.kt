@@ -5,9 +5,11 @@ import dev.nlpplayground.routes.apiRoutes
 import dev.nlpplayground.routes.healthRoute
 import dev.nlpplayground.routes.pretrainedRoutes
 import dev.nlpplayground.routes.uploadRoute
+import dev.nlpplayground.routes.webRoutes
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.Application
 import io.ktor.server.application.install
+import io.ktor.server.http.content.staticResources
 import io.ktor.server.plugins.statuspages.StatusPages
 import io.ktor.server.response.respond
 import io.ktor.server.routing.routing
@@ -37,5 +39,9 @@ internal fun Application.configureRouting(ctx: AppContext) {
         pretrainedRoutes(ctx)
         apiRoutes(ctx)
         uploadRoute(ctx, this@configureRouting)
+        webRoutes()
+        // Static assets (HTML home, CSS, JS, images) under `resources/static`.
+        // Listed last so dynamic routes win on path conflicts.
+        staticResources("/", "static")
     }
 }

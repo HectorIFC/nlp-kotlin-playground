@@ -1,0 +1,82 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>nlp-kotlin-playground</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<header class="site-header">
+    <div class="container">
+        <a class="brand" href="/">nlp-kotlin-playground</a>
+        <nav class="ecosystem">
+            <a href="https://github.com/HectorIFC/tessera" target="_blank" rel="noopener">Tessera</a>
+            <span aria-hidden="true">·</span>
+            <a href="https://github.com/HectorIFC/mosaic" target="_blank" rel="noopener">Mosaic</a>
+            <span aria-hidden="true">·</span>
+            <a href="https://github.com/HectorIFC/nlp-kotlin-playground" target="_blank" rel="noopener">Source</a>
+        </nav>
+    </div>
+</header>
+
+<main class="container">
+    <section class="hero">
+        <h1>Tessera + Mosaic, end to end.</h1>
+        <p class="subtitle">
+            A live demo of a pure-Kotlin NLP pipeline: byte-level BPE tokenization,
+            lookup-table embeddings, mean-pooled cosine search — running in your browser.
+        </p>
+    </section>
+
+    <aside class="disclaimer" role="note">
+        <strong>About these results:</strong>
+        Mosaic provides embeddings as a <em>lookup table</em> — the vectors are randomly
+        initialized, not trained. The pipeline (tokenization → vector lookup → mean pooling →
+        cosine similarity) is real and identical to production-grade pipelines, but
+        <strong>without training, the similarities reflect random structure</strong>, not
+        semantic meaning. Training (Word2Vec / GloVe / etc) is a separate future project.
+    </aside>
+
+    <section class="modes">
+        <article class="mode-card" id="pretrained-card">
+            <h2>Use a pre-trained corpus</h2>
+            <p>Three small corpora ship with the app. Pick one to jump straight to the explorer.</p>
+            <ul id="pretrained-list" class="pretrained-list" aria-live="polite">
+                <li class="placeholder">Loading…</li>
+            </ul>
+            <p id="pretrained-empty" class="muted" hidden>
+                No pre-trained corpora bundled yet — they land in Phase 4.
+                Upload your own corpus on the right to try the pipeline now.
+            </p>
+        </article>
+
+        <article class="mode-card" id="upload-card">
+            <h2>Upload your own corpus</h2>
+            <p>Plain UTF-8 text, up to 2&nbsp;MB. Training may take up to 60&nbsp;seconds.</p>
+            <form id="upload-form">
+                <label class="file-input">
+                    <input type="file" id="upload-file" accept=".txt,text/plain" required>
+                    <span>Choose a .txt file…</span>
+                </label>
+                <button type="submit" id="upload-submit">Train pipeline</button>
+            </form>
+            <div id="upload-status" class="upload-status" hidden></div>
+        </article>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        Part of a 3-project Kotlin NLP ecosystem ·
+        <a href="https://github.com/HectorIFC/tessera" target="_blank" rel="noopener">Tessera</a>
+        ·
+        <a href="https://github.com/HectorIFC/mosaic" target="_blank" rel="noopener">Mosaic</a>
+        ·
+        <a href="https://github.com/HectorIFC/nlp-kotlin-playground" target="_blank" rel="noopener">Playground</a>
+    </div>
+</footer>
+
+<script type="module" src="/js/home.js"></script>
+</body>
+</html>

@@ -1,0 +1,104 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Explore · nlp-kotlin-playground</title>
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="page-explore">
+<header class="site-header">
+    <div class="container">
+        <a class="brand" href="/">nlp-kotlin-playground</a>
+        <div class="corpus-info">
+            <span class="muted">Active corpus:</span>
+            <strong id="corpus-name">…</strong>
+            <a class="change-corpus" href="/">Change corpus</a>
+        </div>
+    </div>
+</header>
+
+<aside class="disclaimer sticky" role="note">
+    <strong>Heads up:</strong> embeddings are not trained. Scores demonstrate pipeline mechanics,
+    not semantic quality.
+</aside>
+
+<main class="container explore-main">
+    <nav class="tabs" role="tablist" aria-label="Pipeline explorer">
+        <button class="tab" role="tab" data-tab="search" aria-selected="true">Search</button>
+        <button class="tab" role="tab" data-tab="tokenize" aria-selected="false">Tokenize</button>
+        <button class="tab" role="tab" data-tab="compare" aria-selected="false">Compare</button>
+    </nav>
+
+    <!-- Search tab -->
+    <section class="tab-panel" id="tab-search" role="tabpanel" aria-labelledby="tab-search">
+        <form id="search-form" class="single-field-form">
+            <label for="search-query" class="visually-hidden">Search query</label>
+            <input
+                type="text"
+                id="search-query"
+                placeholder="Type a phrase to find similar sentences…"
+                autocomplete="off"
+                required
+            >
+            <label for="search-topk" class="visually-hidden">Top K</label>
+            <input type="number" id="search-topk" min="1" max="20" value="5" title="Top K">
+            <button type="submit">Search</button>
+        </form>
+        <div id="search-status" class="status-line" aria-live="polite"></div>
+        <ol id="search-results" class="search-results"></ol>
+    </section>
+
+    <!-- Tokenize tab -->
+    <section class="tab-panel" id="tab-tokenize" role="tabpanel" hidden>
+        <form id="tokenize-form" class="single-field-form">
+            <label for="tokenize-text" class="visually-hidden">Text to tokenize</label>
+            <input
+                type="text"
+                id="tokenize-text"
+                placeholder="Type any text to see how Tessera breaks it down…"
+                autocomplete="off"
+                required
+            >
+            <button type="submit">Tokenize</button>
+        </form>
+        <div id="tokenize-status" class="status-line" aria-live="polite"></div>
+        <div id="tokenize-tokens" class="token-chips"></div>
+    </section>
+
+    <!-- Compare tab -->
+    <section class="tab-panel" id="tab-compare" role="tabpanel" hidden>
+        <form id="compare-form" class="compare-form">
+            <label>
+                <span>Text A</span>
+                <textarea id="compare-a" rows="3" required></textarea>
+            </label>
+            <label>
+                <span>Text B</span>
+                <textarea id="compare-b" rows="3" required></textarea>
+            </label>
+            <button type="submit">Compute similarity</button>
+        </form>
+        <div id="compare-status" class="status-line" aria-live="polite"></div>
+        <div id="compare-result" class="compare-result" hidden>
+            <span class="muted">Cosine similarity:</span>
+            <strong id="compare-score">—</strong>
+            <div class="score-bar"><div id="compare-bar" class="score-bar-fill"></div></div>
+        </div>
+    </section>
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        Part of a 3-project Kotlin NLP ecosystem ·
+        <a href="https://github.com/HectorIFC/tessera" target="_blank" rel="noopener">Tessera</a>
+        ·
+        <a href="https://github.com/HectorIFC/mosaic" target="_blank" rel="noopener">Mosaic</a>
+        ·
+        <a href="https://github.com/HectorIFC/nlp-kotlin-playground" target="_blank" rel="noopener">Playground</a>
+    </div>
+</footer>
+
+<script type="module" src="/js/explore.js"></script>
+</body>
+</html>

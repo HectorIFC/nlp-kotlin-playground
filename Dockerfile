@@ -1,7 +1,7 @@
 # syntax=docker/dockerfile:1.7
 
 # ---------- Stage 1: build ----------
-FROM eclipse-temurin:21-jdk-jammy AS builder
+FROM eclipse-temurin:25-jdk-jammy AS builder
 
 WORKDIR /build
 
@@ -19,7 +19,7 @@ COPY src src
 RUN ./gradlew --no-daemon installDist
 
 # ---------- Stage 2: runtime ----------
-FROM eclipse-temurin:21-jre-jammy
+FROM eclipse-temurin:25-jre-jammy
 
 LABEL org.opencontainers.image.title="nlp-kotlin-playground"
 LABEL org.opencontainers.image.description="Interactive playground demonstrating the Tessera + Mosaic NLP pipeline in Kotlin."

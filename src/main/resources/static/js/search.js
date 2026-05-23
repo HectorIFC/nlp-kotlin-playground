@@ -5,10 +5,19 @@ export function wireSearchTab(sessionId) {
     const status = document.getElementById("search-status");
     const results = document.getElementById("search-results");
 
+    const TOP_K_MIN = 1;
+    const TOP_K_MAX = 20;
+    const TOP_K_DEFAULT = 5;
+
     form.addEventListener("submit", async (event) => {
         event.preventDefault();
         const query = document.getElementById("search-query").value.trim();
-        const topK = parseInt(document.getElementById("search-topk").value, 10) || 5;
+        // Clamp client-side: the input's min/max are advisory, and parseInt
+        // silently accepts out-of-range values when typed directly.
+        const raw = parseInt(document.getElementById("search-topk").value, 10);
+        const topK = Number.isFinite(raw)
+            ? Math.min(Math.max(raw, TOP_K_MIN), TOP_K_MAX)
+            : TOP_K_DEFAULT;
         if (!query) return;
         status.className = "status-line";
         status.textContent = "Searching…";

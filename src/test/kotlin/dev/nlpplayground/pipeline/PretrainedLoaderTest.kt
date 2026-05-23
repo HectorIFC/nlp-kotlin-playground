@@ -19,7 +19,7 @@ class PretrainedLoaderTest :
 
         "loading an unknown name fails with a helpful message" {
             val loader = PretrainedLoader(available = listOf("alice-in-wonderland"))
-            val ex = shouldThrow<IllegalArgumentException> { loader.load("shakespeare") }
+            val ex = shouldThrow<NoSuchPretrainedException> { loader.load("shakespeare") }
             (ex.message?.contains("Unknown pre-trained corpus") == true) shouldBe true
         }
 

@@ -2,6 +2,9 @@ import { getJson, postEmpty, postFile } from "/js/api.js";
 
 const POLL_INTERVAL_MS = 1000;
 const POLL_TIMEOUT_MS = 120_000;
+// Mirrors the server-side limit in UploadRoute.kt (PRD §6.2). Enforcing it
+// client-side saves the round trip and gives a friendlier error.
+const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 
 document.addEventListener("DOMContentLoaded", () => {
     renderPretrainedList();
@@ -56,6 +59,15 @@ function wireUploadForm() {
         event.preventDefault();
         const file = fileInput.files[0];
         if (!file) return;
+
+        if (file.size > MAX_UPLOAD_BYTES) {
+            const mb = (file.size / 1024 / 1024).toFixed(2);
+            status.hidden = false;
+            status.className = "upload-status error";
+            status.textContent = `File is ${mb} MB — the limit is 2 MB. Trim it and try again.`;
+            return;
+        }
+
         submit.disabled = true;
         status.hidden = false;
         status.className = "upload-status";

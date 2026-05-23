@@ -39,13 +39,16 @@
 <main>
 <div class="container explore-main">
     <nav class="tabs" role="tablist" aria-label="Pipeline explorer">
-        <button class="tab" role="tab" data-tab="search" aria-selected="true">Search</button>
-        <button class="tab" role="tab" data-tab="tokenize" aria-selected="false">Tokenize</button>
-        <button class="tab" role="tab" data-tab="compare" aria-selected="false">Compare</button>
+        <button class="tab" role="tab" id="tab-btn-search" data-tab="search"
+                aria-selected="true" aria-controls="tab-search" tabindex="0">Search</button>
+        <button class="tab" role="tab" id="tab-btn-tokenize" data-tab="tokenize"
+                aria-selected="false" aria-controls="tab-tokenize" tabindex="-1">Tokenize</button>
+        <button class="tab" role="tab" id="tab-btn-compare" data-tab="compare"
+                aria-selected="false" aria-controls="tab-compare" tabindex="-1">Compare</button>
     </nav>
 
     <!-- Search tab -->
-    <section class="tab-panel" id="tab-search" role="tabpanel">
+    <section class="tab-panel" id="tab-search" role="tabpanel" aria-labelledby="tab-btn-search">
         <form id="search-form" class="single-field-form">
             <label for="search-query" class="visually-hidden">Search query</label>
             <input
@@ -71,7 +74,7 @@
     </section>
 
     <!-- Tokenize tab -->
-    <section class="tab-panel" id="tab-tokenize" role="tabpanel" hidden>
+    <section class="tab-panel" id="tab-tokenize" role="tabpanel" aria-labelledby="tab-btn-tokenize" hidden>
         <form id="tokenize-form" class="single-field-form">
             <label for="tokenize-text" class="visually-hidden">Text to tokenize</label>
             <input
@@ -92,7 +95,7 @@
     </section>
 
     <!-- Compare tab -->
-    <section class="tab-panel" id="tab-compare" role="tabpanel" hidden>
+    <section class="tab-panel" id="tab-compare" role="tabpanel" aria-labelledby="tab-btn-compare" hidden>
         <form id="compare-form" class="compare-form">
             <label>
                 <span>Text A</span>

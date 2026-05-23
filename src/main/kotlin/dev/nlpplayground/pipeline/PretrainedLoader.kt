@@ -47,8 +47,8 @@ internal class PretrainedLoader(
     fun list(): List<String> = available
 
     fun load(name: String): Pipeline {
-        require(name in available) {
-            "Unknown pre-trained corpus: '$name'. Available: $available"
+        if (name !in available) {
+            throw NoSuchPretrainedException("Unknown pre-trained corpus: '$name'. Available: $available")
         }
         val tmpDir = Files.createTempDirectory("nlp-playground-pretrained-")
         try {

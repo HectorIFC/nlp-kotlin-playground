@@ -38,13 +38,31 @@ class ApiRouteTest :
                 }
                 response.status shouldBe HttpStatusCode.OK
                 val body: SearchResponse = response.body()
+                // Top-K contract: exactly topK results (corpus is large enough), sorted desc, scores in range.
                 body.results.shouldNotBeEmpty()
+                body.results.size shouldBe 3
                 val scores = body.results.map { it.score }
                 scores shouldBe scores.sortedDescending()
                 body.results.forEach { hit ->
                     hit.score shouldBeGreaterThanOrEqualTo -1f
                     hit.score shouldBeLessThanOrEqualTo 1f
                 }
+            }
+        }
+
+        "POST /api/search caps results by topK even when corpus has more candidates" {
+            testApplication {
+                val ctx = AppContext()
+                val sessionId = ctx.sessions.createReady(tinyPipeline())
+                installApp(ctx)
+
+                val response = testClient().post("/api/search/$sessionId") {
+                    contentType(ContentType.Application.Json)
+                    setBody(SearchRequest(query = "rabbit hole", topK = 1))
+                }
+                response.status shouldBe HttpStatusCode.OK
+                val body: SearchResponse = response.body()
+                body.results.size shouldBe 1
             }
         }
 

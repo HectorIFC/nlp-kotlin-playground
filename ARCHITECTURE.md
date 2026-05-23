@@ -12,7 +12,7 @@ Its purpose is to make two sister libraries — [Tessera](https://github.com/Hec
 
 The pipeline is real:
 
-```
+```text
 text → Tessera (tokenize) → token IDs → Mosaic (lookup) → vectors
                                                               ↓
                                   mean pool → query vector / sentence vectors
@@ -74,7 +74,7 @@ flowchart LR
 
 `POST /api/search/{sessionId}` is the canonical end-to-end path.
 
-```
+```text
 1. Ktor routes the request to apiRoutes → searchEndpoint(ctx).
 2. requireReadyPipeline(ctx) resolves {sessionId} against SessionStore.
    - missing      → 404 ErrorResponse("Unknown session")
@@ -139,7 +139,7 @@ Nothing from them is re-implemented. The integration class `dev.mosaic.TesseraEm
 
 Three corpora ship in `src/main/resources/pretrained/<name>/`:
 
-```
+```text
 alice-in-wonderland/
 ├── corpus.txt              # 151 KB — Project Gutenberg #11, license stripped
 ├── tessera.json            # 175 KB — trained tokenizer (2000 BPE merges)
@@ -173,7 +173,7 @@ The frontend polls `GET /api/status/{sessionId}` every 1 s until the state is no
 
 ## 6. HTTP module layout
 
-```
+```text
 src/main/kotlin/dev/nlpplayground/
 ├── Application.kt                # EngineMain + module() + moduleWith(ctx)
 ├── AppContext.kt                 # PipelineService + SessionStore + Scheduler
@@ -204,7 +204,7 @@ src/main/kotlin/dev/nlpplayground/
 
 The frontend is intentionally framework-free: vanilla ES modules served from `src/main/resources/static/`.
 
-```
+```text
 static/
 ├── index.html       # home: pre-trained list + upload form + disclaimer
 ├── explore.html     # tabs (Search / Tokenize / Compare) — sessionId read from URL

@@ -32,8 +32,13 @@ RUN apt-get update \
     && apt-get install -y --no-install-recommends wget \
     && rm -rf /var/lib/apt/lists/*
 
+# Run as an unprivileged user. The system account `nobody` already exists in
+# the base image; we just make sure /app is owned by it so the JVM can read its
+# files and write JIT scratch data under /tmp without elevated privileges.
 WORKDIR /app
-COPY --from=builder /build/build/install/nlp-kotlin-playground /app/
+COPY --from=builder --chown=nobody:nogroup /build/build/install/nlp-kotlin-playground /app/
+
+USER nobody:nogroup
 
 EXPOSE 8080
 

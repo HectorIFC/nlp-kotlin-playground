@@ -21,10 +21,8 @@ internal fun Route.pretrainedRoutes(ctx: AppContext) {
 
             val pipeline = try {
                 ctx.pipelineService.loadPretrained(name)
-            } catch (e: IllegalArgumentException) {
-                return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("Unknown corpus", e.message))
             } catch (e: NoSuchPretrainedException) {
-                return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("Resources missing", e.message))
+                return@post call.respond(HttpStatusCode.NotFound, ErrorResponse("Unknown corpus", e.message))
             }
 
             val sessionId = ctx.sessions.createReady(pipeline)

@@ -36,7 +36,13 @@ function wireTabs() {
     const panels = document.querySelectorAll(".tab-panel");
     tabs.forEach((tab) => {
         tab.addEventListener("click", () => {
-            tabs.forEach((t) => t.setAttribute("aria-selected", t === tab ? "true" : "false"));
+            tabs.forEach((t) => {
+                const active = t === tab;
+                t.setAttribute("aria-selected", active ? "true" : "false");
+                // Keep tabindex in sync so the roving-tabindex pattern lets
+                // keyboard users tab into the active tab and never the inactive ones.
+                t.setAttribute("tabindex", active ? "0" : "-1");
+            });
             const targetId = `tab-${tab.dataset.tab}`;
             panels.forEach((panel) => {
                 panel.hidden = panel.id !== targetId;

@@ -7,12 +7,15 @@ import dev.nlpplayground.pipeline.SemanticSearch
 import dev.nlpplayground.session.SessionEntry
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
+import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
+import kotlinx.serialization.SerializationException
+import java.util.Locale
 
 internal fun Route.apiRoutes(ctx: AppContext) {
     route("/api") {
@@ -33,7 +36,8 @@ private fun Route.statusEndpoint(ctx: AppContext) {
         call.respond(
             StatusResponse(
                 sessionId = entry.id,
-                state = entry.state.name.lowercase(),
+                // Locale.ROOT: the API contract is ASCII-only — avoid Turkish-locale 'i' surprises.
+                state = entry.state.name.lowercase(Locale.ROOT),
                 name = entry.pipeline?.name,
                 error = entry.errorMessage,
             ),
@@ -87,8 +91,13 @@ private fun Route.similarityEndpoint(ctx: AppContext) {
 
 private suspend inline fun <reified T : Any> ApplicationCall.receiveJson(): T? = try {
     receive()
-} catch (_: Exception) {
-    respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid JSON body"))
+} catch (e: BadRequestException) {
+    // Ktor wraps malformed/empty bodies and unsupported content-types in BadRequestException.
+    respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid JSON body", e.message))
+    null
+} catch (e: SerializationException) {
+    // kotlinx-serialization decoding errors (missing fields, wrong types).
+    respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid JSON body", e.message))
     null
 }
 

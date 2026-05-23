@@ -22,7 +22,7 @@ application {
     mainClass.set("dev.nlpplayground.ApplicationKt")
 }
 
-val ktorVersion = "3.0.3"
+val ktorVersion = "3.5.0"
 val kotestVersion = "6.1.11"
 
 dependencies {

@@ -3,29 +3,48 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="Interactive playground demonstrating the Tessera (BPE tokenizer) + Mosaic (embeddings) NLP pipeline in pure Kotlin.">
+    <meta name="color-scheme" content="dark">
     <title>nlp-kotlin-playground</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
     <link rel="stylesheet" href="/css/main.css">
 </head>
 <body>
 <header class="site-header">
     <div class="container">
-        <a class="brand" href="/">nlp-kotlin-playground</a>
+        <a class="brand" href="/">
+            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+                <rect x="6" y="10" width="9" height="12" rx="2" fill="#6366f1"/>
+                <rect x="18" y="10" width="3" height="12" rx="1" fill="#ea580c"/>
+                <rect x="22" y="13" width="3" height="9" rx="1" fill="#ea580c" opacity="0.75"/>
+                <rect x="26" y="16" width="3" height="6" rx="1" fill="#ea580c" opacity="0.5"/>
+            </svg>
+            nlp-kotlin-playground
+        </a>
         <nav class="ecosystem">
             <a href="https://github.com/HectorIFC/tessera" target="_blank" rel="noopener">Tessera</a>
-            <span aria-hidden="true">·</span>
+            <span class="dot" aria-hidden="true"></span>
             <a href="https://github.com/HectorIFC/mosaic" target="_blank" rel="noopener">Mosaic</a>
-            <span aria-hidden="true">·</span>
+            <span class="dot" aria-hidden="true"></span>
             <a href="https://github.com/HectorIFC/nlp-kotlin-playground" target="_blank" rel="noopener">Source</a>
         </nav>
     </div>
 </header>
 
-<main class="container">
+<main>
+<div class="container">
     <section class="hero">
-        <h1>Tessera + Mosaic, end to end.</h1>
+        <h1>
+            <span class="tessera-word">Tessera</span> +
+            <span class="mosaic-word">Mosaic</span>,
+            end&nbsp;to&nbsp;end.
+        </h1>
         <p class="subtitle">
             A live demo of a pure-Kotlin NLP pipeline: byte-level BPE tokenization,
-            lookup-table embeddings, mean-pooled cosine search — running in your browser.
+            lookup-table embeddings, mean-pooled cosine search — running entirely in your browser.
         </p>
     </section>
 
@@ -40,7 +59,7 @@
 
     <section class="modes">
         <article class="mode-card" id="pretrained-card">
-            <h2>Use a pre-trained corpus</h2>
+            <h2><span class="accent-dot" aria-hidden="true"></span> Use a pre-trained corpus</h2>
             <p>Three small corpora ship with the app. Pick one to jump straight to the explorer.</p>
             <ul id="pretrained-list" class="pretrained-list" aria-live="polite">
                 <li class="placeholder">Loading…</li>
@@ -52,8 +71,8 @@
         </article>
 
         <article class="mode-card" id="upload-card">
-            <h2>Upload your own corpus</h2>
-            <p>Plain UTF-8 text, up to 2&nbsp;MB. Training may take up to 60&nbsp;seconds.</p>
+            <h2><span class="accent-dot" aria-hidden="true"></span> Upload your own corpus</h2>
+            <p>Plain UTF-8 text, up to 2&nbsp;MB. Training takes up to 60&nbsp;seconds.</p>
             <form id="upload-form">
                 <label class="file-input">
                     <input type="file" id="upload-file" accept=".txt,text/plain" required>
@@ -64,16 +83,23 @@
             <div id="upload-status" class="upload-status" hidden></div>
         </article>
     </section>
+</div>
 </main>
 
 <footer class="site-footer">
     <div class="container">
-        Part of a 3-project Kotlin NLP ecosystem ·
-        <a href="https://github.com/HectorIFC/tessera" target="_blank" rel="noopener">Tessera</a>
-        ·
-        <a href="https://github.com/HectorIFC/mosaic" target="_blank" rel="noopener">Mosaic</a>
-        ·
-        <a href="https://github.com/HectorIFC/nlp-kotlin-playground" target="_blank" rel="noopener">Playground</a>
+        <div class="footer-links">
+            <a href="https://github.com/HectorIFC/tessera" target="_blank" rel="noopener">
+                <span class="footer-tag t-tessera" aria-hidden="true"></span> Tessera
+            </a>
+            <a class="mosaic-link" href="https://github.com/HectorIFC/mosaic" target="_blank" rel="noopener">
+                <span class="footer-tag t-mosaic" aria-hidden="true"></span> Mosaic
+            </a>
+            <a href="https://github.com/HectorIFC/nlp-kotlin-playground" target="_blank" rel="noopener">
+                <span class="footer-tag t-this" aria-hidden="true"></span> Playground
+            </a>
+        </div>
+        <span class="muted">Pure Kotlin · JVM · MIT</span>
     </div>
 </footer>
 

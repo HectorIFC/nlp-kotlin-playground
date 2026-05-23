@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 32 32" width="32" height="32">
+    <!-- Background tile -->
+    <rect width="32" height="32" rx="6" fill="#0b0c10"/>
+    <!-- Tessera (indigo): a token rectangle -->
+    <rect x="6" y="10" width="9" height="12" rx="2" fill="#6366f1"/>
+    <!-- Mosaic (orange): three embedding cells, descending opacity to suggest vectors -->
+    <rect x="18" y="10" width="3" height="12" rx="1" fill="#ea580c"/>
+    <rect x="22" y="13" width="3" height="9" rx="1" fill="#ea580c" opacity="0.75"/>
+    <rect x="26" y="16" width="3" height="6" rx="1" fill="#ea580c" opacity="0.5"/>
+</svg>

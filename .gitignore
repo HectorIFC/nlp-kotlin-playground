@@ -1,7 +1,6 @@
 # ===== Gradle =====
 .gradle/
 build/
-!gradle/wrapper/gradle-wrapper.jar
 !**/src/**/build/
 gradle-app.setting
 .gradletasknamecache
@@ -48,6 +47,10 @@ $RECYCLE.BIN/
 *.nar
 hs_err_pid*
 replay_pid*
+
+# The Gradle wrapper jar must be committed — its negation has to come AFTER
+# the *.jar rule above, otherwise git ignores it (last matching rule wins).
+!gradle/wrapper/gradle-wrapper.jar
 
 # ===== Logs e temporários =====
 *.log

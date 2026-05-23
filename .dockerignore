@@ -1,0 +1,45 @@
+.git/
+.github/
+.gradle/
+build/
+.idea/
+.vscode/
+*.iml
+.DS_Store
+
+# Local-only files
+.env*
+local.properties
+gradle.properties.local
+
+# Documentation / docs assets that the runtime image doesn't need
+docs/
+*.md
+!README.md
+
+# IDE/OS artifacts
+out/
+bin/
+
+# Logs and temp
+*.log
+*.tmp
+.kotlin/
+
+# Source-side scratch
+scratch/
+.pretrain-tmp/
+.corpus-cache/
+uploads/
+tmp-uploads/
+
+# Test artifacts
+**/build/test-results/
+**/build/reports/
+
+# Keep these for the build:
+# - gradle/wrapper/  (needed for ./gradlew inside the builder stage)
+# - src/             (needed by the build)
+# - settings.gradle.kts, build.gradle.kts, gradle.properties
+# - config/          (detekt config)
+# - gradlew, gradlew.bat

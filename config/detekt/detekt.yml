@@ -1,0 +1,98 @@
+build:
+  maxIssues: 0
+
+config:
+  validation: true
+  warningsAsErrors: false
+
+complexity:
+  active: true
+  ComplexMethod:
+    active: true
+    threshold: 20
+  LongMethod:
+    active: true
+    threshold: 60
+  LongParameterList:
+    active: true
+    functionThreshold: 8
+  TooManyFunctions:
+    active: true
+    thresholdInFiles: 20
+    thresholdInClasses: 15
+    thresholdInObjects: 15
+  CyclomaticComplexMethod:
+    active: true
+    threshold: 20
+
+style:
+  active: true
+  MagicNumber:
+    active: true
+    excludes:
+      - '**/test/**'
+    ignoreNumbers:
+      - '-1'
+      - '0'
+      - '1'
+      - '2'
+      - '128'    # default embedding dim
+      - '256'    # byte vocabulary size — Tessera domain constant
+      - '255'    # max byte value
+      - '2000'   # default BPE merges
+      - '8080'   # default HTTP port
+    ignoreConstantDeclaration: true
+    ignoreCompanionObjectPropertyDeclaration: true
+    ignoreAnnotation: true
+    ignoreNamedArgument: true
+    ignoreEnums: true
+  MaxLineLength:
+    active: true
+    maxLineLength: 120
+  WildcardImport:
+    active: true
+    excludeImports:
+      - 'java.util.*'
+      - 'kotlinx.coroutines.*'
+      - 'io.ktor.server.application.*'
+      - 'io.ktor.server.response.*'
+      - 'io.ktor.server.request.*'
+      - 'io.ktor.server.routing.*'
+  UnusedPrivateMember:
+    active: true
+  ReturnCount:
+    active: true
+    max: 4
+  ThrowsCount:
+    active: true
+    max: 3
+
+naming:
+  active: true
+  FunctionNaming:
+    active: true
+    functionPattern: '[a-zA-Z][a-zA-Z0-9]*'
+    excludes:
+      - '**/test/**'
+      - '**/*Test.kt'
+      - '**/*Spec.kt'
+
+performance:
+  active: true
+
+potential-bugs:
+  active: true
+
+exceptions:
+  active: true
+  TooGenericExceptionCaught:
+    active: true
+    exceptionNames:
+      - Error
+      - Exception
+      - Throwable
+      - RuntimeException
+    allowedExceptionNameRegex: '_|(ignore|expected).*'
+
+comments:
+  active: false

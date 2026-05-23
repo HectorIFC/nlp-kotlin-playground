@@ -1,0 +1,44 @@
+version: 2
+updates:
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
+      - github-actions
+    commit-message:
+      prefix: "build(deps)"
+
+  - package-ecosystem: gradle
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
+      - gradle
+    commit-message:
+      prefix: "build(deps)"
+    groups:
+      kotlin:
+        patterns:
+          - "org.jetbrains.kotlin*"
+      ktor:
+        patterns:
+          - "io.ktor*"
+      kotest:
+        patterns:
+          - "io.kotest*"
+
+  - package-ecosystem: docker
+    directory: /
+    schedule:
+      interval: weekly
+      day: monday
+    labels:
+      - dependencies
+      - docker
+    commit-message:
+      prefix: "build(deps)"

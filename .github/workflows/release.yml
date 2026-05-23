@@ -18,7 +18,10 @@ permissions:
 
 env:
   REGISTRY: ghcr.io
-  IMAGE_NAME: ${{ github.repository }}
+  # IMAGE_NAME is computed in the `Compute image name` step below.
+  # GHCR rejects repo URLs with uppercase letters, but `github.repository`
+  # preserves casing (here: HectorIFC/nlp-kotlin-playground), so we lowercase
+  # it once and reuse the result.
 
 jobs:
   release:
@@ -39,6 +42,10 @@ jobs:
           distribution: 'temurin'
 
       - uses: gradle/actions/setup-gradle@v6
+
+      - name: Compute image name (GHCR-safe lowercase)
+        id: image
+        run: echo "name=${GITHUB_REPOSITORY,,}" >> "$GITHUB_OUTPUT"
 
       # Computes the next SemVer from conventional commits since the last tag.
       #
@@ -142,8 +149,8 @@ jobs:
           context: .
           push: true
           tags: |
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.new_tag }}
-            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.tag.outputs.new_tag }}
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
           labels: |
             org.opencontainers.image.source=https://github.com/${{ github.repository }}
             org.opencontainers.image.version=${{ steps.tag.outputs.new_version }}
@@ -179,8 +186,8 @@ jobs:
           name: ${{ steps.tag.outputs.new_tag }}
           body: |
             Docker image:
-            - `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ steps.tag.outputs.new_tag }}`
-            - `${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:latest`
+            - `${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.tag.outputs.new_tag }}`
+            - `${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest`
 
             ${{ steps.tag.outputs.changelog }}
           generateReleaseNotes: false

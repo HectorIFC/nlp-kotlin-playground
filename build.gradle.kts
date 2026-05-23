@@ -36,7 +36,7 @@ dependencies {
     implementation("io.ktor:ktor-server-config-yaml-jvm:$ktorVersion")
 
     // Logging backend
-    implementation("ch.qos.logback:logback-classic:1.5.12")
+    implementation("ch.qos.logback:logback-classic:1.5.32")
 
     // Serialization (transitively included by Ktor + Mosaic; kept explicit for clarity)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")

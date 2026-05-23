@@ -39,7 +39,7 @@ dependencies {
     implementation("ch.qos.logback:logback-classic:1.5.32")
 
     // Serialization (transitively included by Ktor + Mosaic; kept explicit for clarity)
-    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.7.3")
+    implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
 
     // NLP pipeline — sister projects via JitPack
     // Mosaic transitively brings Tessera, but we pin Tessera explicitly so consumers see the version.

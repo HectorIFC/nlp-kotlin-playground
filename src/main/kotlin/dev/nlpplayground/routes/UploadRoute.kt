@@ -19,7 +19,7 @@ import java.nio.charset.CodingErrorAction
 import java.nio.charset.StandardCharsets
 import java.util.UUID
 
-private const val MAX_UPLOAD_BYTES = 2L * 1024L * 1024L // 2 MB, per PRD §6.2
+private const val MAX_UPLOAD_BYTES = 2L * 1024L * 1024L // 2 MB
 private const val SHORT_UUID_LENGTH = 8
 private const val UTF8_BOM_LENGTH = 3
 private const val UTF8_BOM_BYTE_0 = 0xEF
@@ -72,7 +72,7 @@ internal fun Route.uploadRoute(ctx: AppContext, scope: CoroutineScope) {
             return@post call.respond(HttpStatusCode.BadRequest, ErrorResponse("Uploaded file is empty"))
         }
 
-        // Use an opaque server-generated name (PRD §6.11 — never trust upload filenames).
+        // Use an opaque server-generated name (never trust upload filenames).
         val internalName = "upload-${UUID.randomUUID().toString().substring(0, SHORT_UUID_LENGTH)}"
         val sessionId = ctx.sessions.createTraining()
 
@@ -94,7 +94,7 @@ internal fun Route.uploadRoute(ctx: AppContext, scope: CoroutineScope) {
 
 /**
  * Returns the decoded string if [bytes] is valid UTF-8, or null otherwise.
- * Strips a BOM if present (PRD §6.4 mentions BOM removal).
+ * Strips a BOM if present (mentions BOM removal).
  */
 private fun decodeUtf8Strict(bytes: ByteArray): String? {
     val cleaned = if (hasUtf8Bom(bytes)) bytes.copyOfRange(UTF8_BOM_LENGTH, bytes.size) else bytes

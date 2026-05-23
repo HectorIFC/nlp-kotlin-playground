@@ -24,7 +24,7 @@ internal data class SessionEntry(
  * Three guarantees this class makes:
  *
  * - Concurrent access is safe via [ConcurrentHashMap].
- * - Old sessions are pruned periodically via [evictOld]; PRD §6.3.
+ * - Old sessions are pruned periodically via [evictOld];
  * - The total number of live sessions never exceeds [maxSessions]; when the
  *   cap is reached, the oldest session is evicted to make room (also §6.3).
  *

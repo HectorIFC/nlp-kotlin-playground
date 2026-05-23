@@ -4,7 +4,7 @@ import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.comparables.shouldBeLessThan
 
 /**
- * Smoke check for the PRD §3.1 perf target: search over a ~200-sentence corpus
+ * Smoke check for perf target: search over a ~200-sentence corpus
  * should return in under 500 ms. Not a benchmark — just a regression net.
  */
 class SemanticSearchPerformanceTest :

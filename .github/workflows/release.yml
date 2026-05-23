@@ -131,7 +131,7 @@ jobs:
         if: steps.gate.outputs.publish == 'true'
         run: ./gradlew build
 
-      - uses: docker/setup-buildx-action@v3
+      - uses: docker/setup-buildx-action@v4
         if: steps.gate.outputs.publish == 'true'
 
       - name: Log in to GHCR

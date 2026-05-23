@@ -1,0 +1,10 @@
+{
+    "version": 1,
+    "vocabSize": 1774,
+    "embeddingDim": 128,
+    "format": "float32-le",
+    "byteOrder": "little-endian",
+    "checksum": "d5f6336b461af20c7d16990a5643ed16c12c542ba56d947a954879aca2477b17",
+    "createdAt": "2026-05-23T17:35:18.759563Z",
+    "tesseraCompatible": true
+}

@@ -1,0 +1,144 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Explore · nlp-kotlin-playground</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body class="page-explore">
+<header class="site-header">
+    <div class="container">
+        <a class="brand" href="/">
+            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+                <rect x="6" y="10" width="9" height="12" rx="2" fill="#6366f1"/>
+                <rect x="18" y="10" width="3" height="12" rx="1" fill="#ea580c"/>
+                <rect x="22" y="13" width="3" height="9" rx="1" fill="#ea580c" opacity="0.75"/>
+                <rect x="26" y="16" width="3" height="6" rx="1" fill="#ea580c" opacity="0.5"/>
+            </svg>
+            nlp-kotlin-playground
+        </a>
+        <div class="corpus-info">
+            <span class="muted">Corpus:</span>
+            <strong id="corpus-name">…</strong>
+            <a class="change-corpus" href="/">Change corpus</a>
+        </div>
+    </div>
+</header>
+
+<aside class="disclaimer sticky" role="note">
+    <strong>Heads up:</strong> embeddings are not trained. Scores demonstrate pipeline mechanics,
+    not semantic quality.
+</aside>
+
+<main>
+<div class="container explore-main">
+    <nav class="tabs" role="tablist" aria-label="Pipeline explorer">
+        <button class="tab" role="tab" id="tab-btn-search" data-tab="search"
+                aria-selected="true" aria-controls="tab-search" tabindex="0">Search</button>
+        <button class="tab" role="tab" id="tab-btn-tokenize" data-tab="tokenize"
+                aria-selected="false" aria-controls="tab-tokenize" tabindex="-1">Tokenize</button>
+        <button class="tab" role="tab" id="tab-btn-compare" data-tab="compare"
+                aria-selected="false" aria-controls="tab-compare" tabindex="-1">Compare</button>
+    </nav>
+
+    <!-- Search tab -->
+    <section class="tab-panel" id="tab-search" role="tabpanel" aria-labelledby="tab-btn-search">
+        <form id="search-form" class="single-field-form">
+            <label for="search-query" class="visually-hidden">Search query</label>
+            <input
+                type="text"
+                id="search-query"
+                placeholder="Type a phrase to find similar sentences…"
+                autocomplete="off"
+                required
+            >
+            <label for="search-topk" class="visually-hidden">Top K</label>
+            <input type="number" id="search-topk" min="1" max="20" value="5" title="Top K">
+            <button type="submit">Search</button>
+        </form>
+        <p class="tab-hint">
+            Tessera is <strong>byte-level</strong> (so <code>alice</code> ≠ <code>Alice</code>) and Mosaic
+            vectors are <strong>random per token</strong>. A sentence's score is the <em>mean</em> of all its
+            token vectors — long sentences average toward zero, so a sentence that literally contains your
+            query word can still lose to an unrelated shorter one by sheer luck of the seed.
+            <strong>This is not substring search.</strong>
+        </p>
+        <div id="search-status" class="status-line" aria-live="polite"></div>
+        <ol id="search-results" class="search-results"></ol>
+    </section>
+
+    <!-- Tokenize tab -->
+    <section class="tab-panel" id="tab-tokenize" role="tabpanel" aria-labelledby="tab-btn-tokenize" hidden>
+        <form id="tokenize-form" class="single-field-form">
+            <label for="tokenize-text" class="visually-hidden">Text to tokenize</label>
+            <input
+                type="text"
+                id="tokenize-text"
+                placeholder="Type any text to see how Tessera breaks it down…"
+                autocomplete="off"
+                required
+            >
+            <button type="submit">Tokenize</button>
+        </form>
+        <p class="tab-hint">
+            Tessera works on <strong>raw UTF-8 bytes</strong>. Each token shows its decoded text and
+            numeric ID. Whitespace, punctuation, and case all produce distinct tokens.
+        </p>
+        <div id="tokenize-status" class="status-line" aria-live="polite"></div>
+        <div id="tokenize-tokens" class="token-chips"></div>
+    </section>
+
+    <!-- Compare tab -->
+    <section class="tab-panel" id="tab-compare" role="tabpanel" aria-labelledby="tab-btn-compare" hidden>
+        <form id="compare-form" class="compare-form">
+            <label>
+                <span>Text A</span>
+                <textarea id="compare-a" rows="3" required></textarea>
+            </label>
+            <label>
+                <span>Text B</span>
+                <textarea id="compare-b" rows="3" required></textarea>
+            </label>
+            <button type="submit">Compute similarity</button>
+        </form>
+        <p class="tab-hint">
+            Scores rise when both texts share BPE tokens. With random embeddings, identical
+            substrings drive similarity — semantic kinship does not. Try rephrasing while keeping
+            shared vocabulary.
+        </p>
+        <div id="compare-status" class="status-line" aria-live="polite"></div>
+        <div id="compare-result" class="compare-result" hidden>
+            <span class="muted">Cosine similarity:</span>
+            <strong id="compare-score">—</strong>
+            <div class="score-bar"><div id="compare-bar" class="score-bar-fill"></div></div>
+        </div>
+    </section>
+</div>
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <div class="footer-links">
+            <a href="https://github.com/HectorIFC/tessera" target="_blank" rel="noopener">
+                <span class="footer-tag t-tessera" aria-hidden="true"></span> Tessera
+            </a>
+            <a class="mosaic-link" href="https://github.com/HectorIFC/mosaic" target="_blank" rel="noopener">
+                <span class="footer-tag t-mosaic" aria-hidden="true"></span> Mosaic
+            </a>
+            <a href="https://github.com/HectorIFC/nlp-kotlin-playground" target="_blank" rel="noopener">
+                <span class="footer-tag t-this" aria-hidden="true"></span> Playground
+            </a>
+        </div>
+        <span class="muted">Pure Kotlin · JVM · MIT</span>
+    </div>
+</footer>
+
+<script type="module" src="/js/explore.js"></script>
+</body>
+</html>

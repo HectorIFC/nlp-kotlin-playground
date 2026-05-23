@@ -1,0 +1,109 @@
+# ===== Gradle =====
+.gradle/
+build/
+!**/src/**/build/
+gradle-app.setting
+.gradletasknamecache
+
+# ===== IntelliJ IDEA / Android Studio =====
+.idea/
+*.iml
+*.ipr
+*.iws
+out/
+
+# ===== VS Code =====
+.vscode/
+*.code-workspace
+
+# ===== Eclipse =====
+.classpath
+.project
+.settings/
+bin/
+
+# ===== macOS =====
+.DS_Store
+.AppleDouble
+.LSOverride
+
+# ===== Windows =====
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+Desktop.ini
+$RECYCLE.BIN/
+
+# ===== Linux =====
+*~
+.directory
+.Trash-*
+
+# ===== Kotlin / JVM =====
+*.class
+*.jar
+*.war
+*.ear
+*.nar
+hs_err_pid*
+replay_pid*
+
+# The Gradle wrapper jar must be committed — its negation has to come AFTER
+# the *.jar rule above, otherwise git ignores it (last matching rule wins).
+!gradle/wrapper/gradle-wrapper.jar
+
+# ===== Logs e temporários =====
+*.log
+*.tmp
+*.bak
+*.swp
+*.swo
+
+# ===== Docker =====
+# Volumes locais que possam aparecer durante dev
+.docker/
+docker-volumes/
+# Override files de docker-compose para configs locais
+docker-compose.override.yml
+docker-compose.local.yml
+
+# ===== Específicos do nlp-kotlin-playground =====
+
+# Uploads de usuário em runtime — NUNCA commitar
+# (uploads ficam em memória, mas se um dia o app persistir em disco para debug, evitar commit)
+uploads/
+tmp-uploads/
+*.upload.tmp
+
+# Cache de download de corpora externos (Project Gutenberg etc)
+# Os corpora TRATADOS em pretrained/ são commitados (caso especial), mas
+# os downloads raw temporários do script de pretrain não.
+.corpus-cache/
+*.corpus.raw
+
+# Artefatos gerados pelo script scripts/pretrain.kts em modo dev
+# (os finais em pretrained/ SÃO commitados — ver exceção abaixo)
+scratch/
+.pretrain-tmp/
+
+# Snapshots de sessão se um dia for habilitada persistência local pra debug
+sessions/
+*.session.json
+
+# Credenciais de publicação (NUNCA commitar)
+local.properties
+gradle.properties.local
+.env
+.env.local
+.env.*.local
+ghcr-token.txt
+**/secrets.properties
+
+# Dependency caches
+.kotlin/
+kotlin-js-store/
+
+# Vídeos brutos pré-edição (só o demo.mp4 final em docs/ deve ser commitado)
+*.mov
+docs/*.raw.mp4
+docs/demo-raw.*

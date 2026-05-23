@@ -1,0 +1,16 @@
+services:
+  playground:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    image: nlp-kotlin-playground:local
+    container_name: nlp-kotlin-playground
+    ports:
+      - "8080:8080"
+    restart: unless-stopped
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--tries=1", "--spider", "http://localhost:8080/health"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 15s

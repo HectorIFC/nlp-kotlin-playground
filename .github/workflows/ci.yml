@@ -1,0 +1,119 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches-ignore: [main]  # feature branches get CI too
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+# Least-privilege default. Individual jobs raise the bar only where needed
+# (e.g. `actions: write` for the GHA cache backend used by docker-build).
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Tests
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: Run tests
+        run: ./gradlew test
+
+      - name: Upload test reports
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: test-reports
+          path: build/reports/tests/
+          retention-days: 7
+
+  quality:
+    name: Code Quality
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: actions/setup-java@v5
+        with:
+          java-version: '21'
+          distribution: 'temurin'
+
+      - uses: gradle/actions/setup-gradle@v6
+        with:
+          cache-read-only: ${{ github.ref != 'refs/heads/main' }}
+
+      - name: ktlint — formatting
+        run: ./gradlew ktlintCheck
+
+      - name: detekt — static analysis
+        run: ./gradlew detekt
+
+      - name: Upload detekt report
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: detekt-report
+          path: build/reports/detekt/
+          retention-days: 7
+
+  docker-build:
+    name: Docker Build & Smoke Test
+    runs-on: ubuntu-latest
+    # The GHA cache backend used below needs to write to the Actions cache API.
+    permissions:
+      contents: read
+      actions: write
+    steps:
+      - uses: actions/checkout@v6
+        with:
+          persist-credentials: false
+
+      - uses: docker/setup-buildx-action@v3
+
+      - name: Build image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          push: false
+          load: true
+          tags: nlp-kotlin-playground:ci-${{ github.run_id }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Smoke test /health
+        run: |
+          docker run -d --name pg -p 8080:8080 nlp-kotlin-playground:ci-${{ github.run_id }}
+          # Wait up to 60s for the container to become healthy.
+          for i in $(seq 1 60); do
+            if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
+              echo "::notice::Healthcheck passed after ${i}s"
+              exit 0
+            fi
+            sleep 1
+          done
+          echo "::error::Healthcheck never returned 200 within 60s"
+          docker logs pg
+          exit 1
+
+      - name: Stop container
+        if: always()
+        run: docker rm -f pg || true

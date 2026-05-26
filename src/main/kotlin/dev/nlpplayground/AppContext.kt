@@ -1,15 +1,16 @@
 package dev.nlpplayground
 
 import dev.nlpplayground.messaging.RabbitConnection
+import dev.nlpplayground.messaging.TrainingConsumer
 import dev.nlpplayground.messaging.TrainingPublisher
 import dev.nlpplayground.persistence.PlaygroundDatabase
 import dev.nlpplayground.persistence.TrainingEventRepository
 import dev.nlpplayground.persistence.TrainingRepository
-import dev.nlpplayground.pipeline.PipelineService
-import dev.nlpplayground.session.SessionEvictionScheduler
-import dev.nlpplayground.session.SessionStore
 import dev.nlpplayground.storage.BlobStorage
 import dev.nlpplayground.storage.MinioBlobStorage
+import dev.nlpplayground.training.ExpirationScheduler
+import dev.nlpplayground.training.TrainingPipelineLoader
+import dev.nlpplayground.training.TrainingService
 
 /**
  * Wired-up runtime collaborators. One instance per JVM in production; tests
@@ -19,9 +20,10 @@ import dev.nlpplayground.storage.MinioBlobStorage
  *
  * - [database], [storage], [rabbit] are opened on construction; the caller
  *   must invoke [close] on shutdown (`Application.kt` wires the hook).
- * - [scheduler] is started on application start and stopped on shutdown.
- * - [sessions] and [pipelineService] are plain in-memory values — they will
- *   be retired in Fase 3 once routes flip to use `TrainingRepository` directly.
+ * - [consumer] worker pool is started on `ApplicationStarted` and stopped on
+ *   `ApplicationStopped` so in-flight messages have a chance to ack cleanly.
+ * - [sessions] is the legacy in-memory store, kept until Fase 3 finishes
+ *   migrating the explore routes to look up trainings via [trainings].
  */
 internal class AppContext(
     val config: Config = Config.fromEnv(),
@@ -29,8 +31,6 @@ internal class AppContext(
     storageFactory: (Config) -> BlobStorage = ::MinioBlobStorage,
     rabbitFactory: (Config) -> RabbitConnection = ::RabbitConnection,
     publisherFactory: (RabbitConnection) -> TrainingPublisher = ::TrainingPublisher,
-    val sessions: SessionStore = SessionStore(),
-    val pipelineService: PipelineService = PipelineService(),
 ) {
 
     val database: PlaygroundDatabase = databaseFactory(config)
@@ -39,11 +39,15 @@ internal class AppContext(
     val publisher: TrainingPublisher = publisherFactory(rabbit)
     val events: TrainingEventRepository = TrainingEventRepository(database.handle)
     val trainings: TrainingRepository = TrainingRepository(database.handle, events)
-    val scheduler: SessionEvictionScheduler = SessionEvictionScheduler(sessions)
+    val trainingService: TrainingService = TrainingService(config, storage, trainings)
+    val pipelineLoader: TrainingPipelineLoader = TrainingPipelineLoader(config, storage)
+    val consumer: TrainingConsumer = TrainingConsumer(rabbit, trainingService, config.consumerConcurrency)
+    val expirationScheduler: ExpirationScheduler = ExpirationScheduler(trainings)
 
     fun close() {
+        runCatching { consumer.stop() }
+        runCatching { expirationScheduler.stop() }
         runCatching { rabbit.close() }
-        runCatching { scheduler.stop() }
         // PlaygroundDatabase uses Exposed's static handle — Exposed cleans up via JVM shutdown hooks.
         // MinIO client is HTTP-based and stateless; nothing to close.
     }

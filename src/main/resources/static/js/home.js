@@ -1,7 +1,5 @@
 import { getJson, postEmpty, postFile } from "/js/api.js";
 
-const POLL_INTERVAL_MS = 1000;
-const POLL_TIMEOUT_MS = 120_000;
 // Mirrors the server-side limit in UploadRoute.kt (PRD §6.2). Enforcing it
 // client-side saves the round trip and gives a friendlier error.
 const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
@@ -40,7 +38,11 @@ async function loadPretrained(name, button) {
     const original = button.textContent;
     button.textContent = `Loading ${name}…`;
     try {
+        // Backend still returns the key `sessionId` for compat with the
+        // existing JSON shape, but the value is a training_id under the hood.
         const { sessionId } = await postEmpty(`/pretrained/${encodeURIComponent(name)}`);
+        // Pre-trained corpora are persisted in the trainings table directly as
+        // READY, so we can skip the progress page and jump to /explore.
         window.location.href = `/explore/${sessionId}`;
     } catch (e) {
         button.disabled = false;
@@ -74,38 +76,16 @@ function wireUploadForm() {
         status.textContent = `Uploading ${file.name}…`;
 
         try {
-            const { sessionId } = await postFile("/upload", file);
-            status.textContent = "Training pipeline (this can take up to 60 seconds)…";
-            const finalState = await pollUntilTerminal(sessionId);
-            if (finalState.state === "ready") {
-                status.className = "upload-status success";
-                status.textContent = "Pipeline ready — opening explorer…";
-                window.location.href = `/explore/${sessionId}`;
-            } else {
-                status.className = "upload-status error";
-                status.textContent = `Training failed: ${finalState.error || "unknown error"}`;
-                submit.disabled = false;
-            }
+            const { trainingId } = await postFile("/upload", file);
+            // The actual training happens in the consumer; the dedicated progress
+            // page polls /api/training/{id} and redirects to /explore when READY.
+            window.location.href = `/training/${trainingId}/progress`;
         } catch (e) {
             status.className = "upload-status error";
             status.textContent = `${e.message}${e.detail ? ` — ${e.detail}` : ""}`;
             submit.disabled = false;
         }
     });
-}
-
-async function pollUntilTerminal(sessionId) {
-    const deadline = Date.now() + POLL_TIMEOUT_MS;
-    while (Date.now() < deadline) {
-        const status = await getJson(`/api/status/${sessionId}`);
-        if (status.state === "ready" || status.state === "error") return status;
-        await sleep(POLL_INTERVAL_MS);
-    }
-    throw new Error("Timed out waiting for the pipeline to become ready.");
-}
-
-function sleep(ms) {
-    return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function escapeHtml(s) {

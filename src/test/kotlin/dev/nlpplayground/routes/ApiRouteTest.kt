@@ -1,6 +1,6 @@
 package dev.nlpplayground.routes
 
-import dev.nlpplayground.AppContext
+import dev.nlpplayground.testAppContext
 import io.kotest.core.spec.style.StringSpec
 import io.kotest.matchers.collections.shouldNotBeEmpty
 import io.kotest.matchers.comparables.shouldBeGreaterThanOrEqualTo
@@ -28,7 +28,7 @@ class ApiRouteTest :
 
         "POST /api/search/{id} returns top-K hits sorted descending" {
             testApplication {
-                val ctx = AppContext()
+                val ctx = testAppContext()
                 val sessionId = ctx.sessions.createReady(tinyPipeline())
                 installApp(ctx)
 
@@ -52,7 +52,7 @@ class ApiRouteTest :
 
         "POST /api/search caps results by topK even when corpus has more candidates" {
             testApplication {
-                val ctx = AppContext()
+                val ctx = testAppContext()
                 val sessionId = ctx.sessions.createReady(tinyPipeline())
                 installApp(ctx)
 
@@ -68,7 +68,7 @@ class ApiRouteTest :
 
         "POST /api/search rejects blank query with 400" {
             testApplication {
-                val ctx = AppContext()
+                val ctx = testAppContext()
                 val sessionId = ctx.sessions.createReady(tinyPipeline())
                 installApp(ctx)
                 val response = testClient().post("/api/search/$sessionId") {
@@ -81,7 +81,7 @@ class ApiRouteTest :
 
         "POST /api/search rejects non-positive topK with 400" {
             testApplication {
-                val ctx = AppContext()
+                val ctx = testAppContext()
                 val sessionId = ctx.sessions.createReady(tinyPipeline())
                 installApp(ctx)
                 val response = testClient().post("/api/search/$sessionId") {
@@ -94,7 +94,7 @@ class ApiRouteTest :
 
         "POST /api/tokenize returns one entry per token" {
             testApplication {
-                val ctx = AppContext()
+                val ctx = testAppContext()
                 val sessionId = ctx.sessions.createReady(tinyPipeline())
                 installApp(ctx)
                 val response = testClient().post("/api/tokenize/$sessionId") {
@@ -110,7 +110,7 @@ class ApiRouteTest :
 
         "POST /api/similarity returns a finite score in [-1, 1]" {
             testApplication {
-                val ctx = AppContext()
+                val ctx = testAppContext()
                 val sessionId = ctx.sessions.createReady(tinyPipeline())
                 installApp(ctx)
                 val response = testClient().post("/api/similarity/$sessionId") {
@@ -127,7 +127,7 @@ class ApiRouteTest :
 
         "POST /api/search on a session that is still TRAINING returns 409" {
             testApplication {
-                val ctx = AppContext()
+                val ctx = testAppContext()
                 val sessionId = ctx.sessions.createTraining()
                 installApp(ctx)
                 val response = testClient().post("/api/search/$sessionId") {
@@ -140,7 +140,7 @@ class ApiRouteTest :
 
         "GET /api/status reports the current pipeline state" {
             testApplication {
-                val ctx = AppContext()
+                val ctx = testAppContext()
                 val sessionId = ctx.sessions.createReady(tinyPipeline())
                 installApp(ctx)
                 val response = testClient().get("/api/status/$sessionId")

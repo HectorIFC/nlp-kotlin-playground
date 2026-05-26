@@ -15,9 +15,15 @@ fun main(args: Array<String>) {
 
 @Suppress("unused")
 fun Application.module() {
+    // Building the context opens the SQLite + MinIO + RabbitMQ connections.
+    // If any dependency is unreachable, this throws and Ktor never finishes
+    // starting — matching the `depends_on: service_healthy` chain in compose.
     val ctx = AppContext()
     monitor.subscribe(ApplicationStarted) { ctx.scheduler.start() }
-    monitor.subscribe(ApplicationStopped) { ctx.scheduler.stop() }
+    monitor.subscribe(ApplicationStopped) {
+        ctx.scheduler.stop()
+        ctx.close()
+    }
     moduleWith(ctx)
 }
 

@@ -35,7 +35,7 @@ internal fun Application.configureRouting(ctx: AppContext) {
     }
 
     routing {
-        healthRoute()
+        healthRoute(ctx)
         pretrainedRoutes(ctx)
         apiRoutes(ctx)
         uploadRoute(ctx, this@configureRouting)

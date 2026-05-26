@@ -3,6 +3,14 @@ package dev.nlpplayground.routes
 import kotlinx.serialization.Serializable
 
 @Serializable
+internal data class HealthResponse(
+    val status: String,
+    val database: Boolean,
+    val storage: Boolean,
+    val rabbit: Boolean,
+)
+
+@Serializable
 internal data class PretrainedListResponse(val available: List<String>)
 
 @Serializable

@@ -1,14 +1,40 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!--
+    Structured JSON logging via Logstash encoder (PRD §5 Fase 5, §6.11).
+
+    Each line is a self-contained JSON document including the SLF4J MDC,
+    so `training_id` (set by CorrelationId plugin and TrainingService)
+    appears as a top-level field for log aggregators to pivot on.
+
+    Validate locally with:  docker logs app | jq .
+
+    Use `LOG_FORMAT=plain` to fall back to the human-readable pattern when
+    tailing logs in a terminal; container deployments leave the default.
+-->
 <configuration>
-    <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
+
+    <property name="LOG_FORMAT" value="${LOG_FORMAT:-json}"/>
+
+    <appender name="json" class="ch.qos.logback.core.ConsoleAppender">
+        <encoder class="net.logstash.logback.encoder.LogstashEncoder">
+            <customFields>{"service":"nlp-kotlin-playground"}</customFields>
+            <includeMdcKeyName>training_id</includeMdcKeyName>
+        </encoder>
+    </appender>
+
+    <appender name="plain" class="ch.qos.logback.core.ConsoleAppender">
         <encoder>
-            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} - %msg%n</pattern>
+            <pattern>%d{HH:mm:ss.SSS} [%thread] %-5level %logger{36} %X{training_id:-} - %msg%n</pattern>
         </encoder>
     </appender>
 
     <root level="INFO">
-        <appender-ref ref="STDOUT" />
+        <appender-ref ref="${LOG_FORMAT}"/>
     </root>
 
-    <logger name="io.netty" level="WARN" />
-    <logger name="org.eclipse.jetty" level="WARN" />
+    <logger name="io.netty" level="WARN"/>
+    <logger name="org.eclipse.jetty" level="WARN"/>
+    <logger name="com.rabbitmq" level="WARN"/>
+    <logger name="io.minio" level="WARN"/>
+    <logger name="Exposed" level="WARN"/>
 </configuration>

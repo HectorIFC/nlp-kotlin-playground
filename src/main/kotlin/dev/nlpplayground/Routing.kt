@@ -1,8 +1,10 @@
 package dev.nlpplayground
 
+import dev.nlpplayground.observability.CorrelationId
 import dev.nlpplayground.routes.ErrorResponse
 import dev.nlpplayground.routes.apiRoutes
 import dev.nlpplayground.routes.healthRoute
+import dev.nlpplayground.routes.metricsRoute
 import dev.nlpplayground.routes.pretrainedRoutes
 import dev.nlpplayground.routes.trainingRoutes
 import dev.nlpplayground.routes.uploadRoute
@@ -36,7 +38,11 @@ internal fun Application.configureRouting(ctx: AppContext) {
     }
 
     routing {
+        // Propagate {trainingId}/{id} path params into the SLF4J MDC so logs
+        // emitted by route handlers are correlated automatically.
+        install(CorrelationId)
         healthRoute(ctx)
+        metricsRoute(ctx)
         pretrainedRoutes(ctx)
         apiRoutes(ctx)
         trainingRoutes(ctx)

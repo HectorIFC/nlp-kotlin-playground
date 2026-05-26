@@ -3,6 +3,7 @@ package dev.nlpplayground
 import dev.nlpplayground.messaging.RabbitConnection
 import dev.nlpplayground.messaging.TrainingConsumer
 import dev.nlpplayground.messaging.TrainingPublisher
+import dev.nlpplayground.observability.MetricsRegistry
 import dev.nlpplayground.persistence.PlaygroundDatabase
 import dev.nlpplayground.persistence.TrainingEventRepository
 import dev.nlpplayground.persistence.TrainingRepository
@@ -39,10 +40,11 @@ internal class AppContext(
     val publisher: TrainingPublisher = publisherFactory(rabbit)
     val events: TrainingEventRepository = TrainingEventRepository(database.handle)
     val trainings: TrainingRepository = TrainingRepository(database.handle, events)
-    val trainingService: TrainingService = TrainingService(config, storage, trainings)
+    val metrics: MetricsRegistry = MetricsRegistry()
+    val trainingService: TrainingService = TrainingService(config, storage, trainings, metrics = metrics)
     val pipelineLoader: TrainingPipelineLoader = TrainingPipelineLoader(config, storage)
     val consumer: TrainingConsumer = TrainingConsumer(rabbit, trainingService, config.consumerConcurrency)
-    val expirationScheduler: ExpirationScheduler = ExpirationScheduler(trainings)
+    val expirationScheduler: ExpirationScheduler = ExpirationScheduler(trainings, metrics)
 
     fun close() {
         runCatching { consumer.stop() }

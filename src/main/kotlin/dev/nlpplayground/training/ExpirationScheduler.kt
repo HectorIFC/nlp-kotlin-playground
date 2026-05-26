@@ -1,5 +1,6 @@
 package dev.nlpplayground.training
 
+import dev.nlpplayground.observability.MetricsRegistry
 import dev.nlpplayground.persistence.TrainingRepository
 import org.slf4j.LoggerFactory
 import java.time.Duration
@@ -20,6 +21,7 @@ import java.util.concurrent.TimeUnit
  */
 internal class ExpirationScheduler(
     private val trainings: TrainingRepository,
+    private val metrics: MetricsRegistry = MetricsRegistry(),
     private val period: Duration = DEFAULT_PERIOD,
 ) {
 
@@ -34,7 +36,12 @@ internal class ExpirationScheduler(
         svc.scheduleAtFixedRate(
             {
                 runCatching { trainings.markExpired() }
-                    .onSuccess { count -> if (count > 0) log.info("Marked {} training(s) EXPIRED", count) }
+                    .onSuccess { count ->
+                        if (count > 0) {
+                            log.info("Marked {} training(s) EXPIRED", count)
+                            repeat(count) { metrics.recordExpired() }
+                        }
+                    }
                     .onFailure { e -> log.warn("Expiration sweep failed", e) }
             },
             period.toMillis(),

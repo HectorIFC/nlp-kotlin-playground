@@ -1,0 +1,107 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="color-scheme" content="dark">
+    <title>Trainings · nlp-kotlin-playground</title>
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=JetBrains+Mono:wght@400;500;600&display=swap">
+    <link rel="stylesheet" href="/css/main.css">
+</head>
+<body>
+<header class="site-header">
+    <div class="container">
+        <a class="brand" href="/">
+            <svg class="brand-mark" viewBox="0 0 32 32" aria-hidden="true">
+                <rect x="6" y="10" width="9" height="12" rx="2" fill="#6366f1"/>
+                <rect x="18" y="10" width="3" height="12" rx="1" fill="#ea580c"/>
+                <rect x="22" y="13" width="3" height="9" rx="1" fill="#ea580c" opacity="0.75"/>
+                <rect x="26" y="16" width="3" height="6" rx="1" fill="#ea580c" opacity="0.5"/>
+            </svg>
+            nlp-kotlin-playground
+        </a>
+        <nav class="ecosystem">
+            <a href="/">Home</a>
+            <span class="dot" aria-hidden="true"></span>
+            <a href="/trainings" class="active">Trainings</a>
+        </nav>
+    </div>
+</header>
+
+<main>
+<div class="container trainings-main">
+    <section class="trainings-hero">
+        <h1>Trainings</h1>
+        <p class="muted">
+            Every upload + pre-trained corpus loaded into the playground. Auto-refreshes every 3 seconds.
+        </p>
+    </section>
+
+    <section class="filters">
+        <fieldset class="filter-group">
+            <legend>Status</legend>
+            <label><input type="checkbox" name="status" value="queued"> queued</label>
+            <label><input type="checkbox" name="status" value="downloading"> downloading</label>
+            <label><input type="checkbox" name="status" value="tokenizing"> tokenizing</label>
+            <label><input type="checkbox" name="status" value="embedding"> embedding</label>
+            <label><input type="checkbox" name="status" value="indexing"> indexing</label>
+            <label><input type="checkbox" name="status" value="ready"> ready</label>
+            <label><input type="checkbox" name="status" value="failed"> failed</label>
+            <label><input type="checkbox" name="status" value="expired"> expired</label>
+        </fieldset>
+        <fieldset class="filter-group">
+            <legend>Created</legend>
+            <label><input type="radio" name="since" value="all" checked> all</label>
+            <label><input type="radio" name="since" value="hour"> last hour</label>
+            <label><input type="radio" name="since" value="day"> last 24 h</label>
+        </fieldset>
+        <div class="filter-meta">
+            <span id="trainings-count" class="muted">0 trainings</span>
+        </div>
+    </section>
+
+    <div id="trainings-status" class="status-line" aria-live="polite"></div>
+
+    <div class="trainings-table-wrap">
+        <table class="trainings-table">
+            <thead>
+                <tr>
+                    <th class="col-id">ID</th>
+                    <th class="col-status">Status</th>
+                    <th class="col-name">Corpus</th>
+                    <th class="col-created">Created</th>
+                    <th class="col-updated">Updated</th>
+                    <th class="col-actions"></th>
+                </tr>
+            </thead>
+            <tbody id="trainings-body">
+                <tr class="trainings-empty"><td colspan="6" class="muted">Loading…</td></tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+</main>
+
+<footer class="site-footer">
+    <div class="container">
+        <div class="footer-links">
+            <a href="https://github.com/HectorIFC/tessera" target="_blank" rel="noopener">
+                <span class="footer-tag t-tessera" aria-hidden="true"></span> Tessera
+            </a>
+            <a class="mosaic-link" href="https://github.com/HectorIFC/mosaic" target="_blank" rel="noopener">
+                <span class="footer-tag t-mosaic" aria-hidden="true"></span> Mosaic
+            </a>
+            <a href="https://github.com/HectorIFC/nlp-kotlin-playground" target="_blank" rel="noopener">
+                <span class="footer-tag t-this" aria-hidden="true"></span> Playground
+            </a>
+        </div>
+        <span class="muted">Pure Kotlin · JVM · MIT</span>
+    </div>
+</footer>
+
+<script type="module" src="/js/trainings.js"></script>
+</body>
+</html>

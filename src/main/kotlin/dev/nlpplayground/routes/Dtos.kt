@@ -49,6 +49,48 @@ internal data class StatusResponse(
 internal data class UploadResponse(val sessionId: String, val state: String)
 
 @Serializable
+internal data class UploadAcceptedResponse(
+    val trainingId: String,
+    val status: String,
+    val statusUrl: String,
+    val progressUrl: String,
+)
+
+@Serializable
+internal data class TrainingEventDto(
+    val fromStatus: String?,
+    val toStatus: String,
+    val detail: String?,
+    val occurredAt: Long,
+)
+
+@Serializable
+internal data class TrainingDetailResponse(
+    val id: String,
+    val status: String,
+    val corpusFilename: String?,
+    val corpusSizeBytes: Long?,
+    val errorMessage: String?,
+    val modelBlobPrefix: String?,
+    val createdAt: Long,
+    val updatedAt: Long,
+    val expiresAt: Long?,
+    val events: List<TrainingEventDto>,
+)
+
+@Serializable
+internal data class TrainingListItem(
+    val id: String,
+    val status: String,
+    val corpusFilename: String?,
+    val createdAt: Long,
+    val updatedAt: Long,
+)
+
+@Serializable
+internal data class TrainingListResponse(val items: List<TrainingListItem>)
+
+@Serializable
 internal data class StartSessionResponse(val sessionId: String, val name: String)
 
 @Serializable

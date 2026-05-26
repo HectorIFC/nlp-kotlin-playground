@@ -2,6 +2,7 @@ package dev.nlpplayground.persistence
 
 import dev.nlpplayground.Config
 import org.jetbrains.exposed.sql.Database
+import org.jetbrains.exposed.sql.SchemaUtils
 import org.jetbrains.exposed.sql.statements.StatementType
 import org.jetbrains.exposed.sql.transactions.transaction
 import org.slf4j.LoggerFactory
@@ -44,6 +45,12 @@ internal open class PlaygroundDatabase(private val config: Config) {
             url = "jdbc:sqlite:${config.sqlitePath}",
             driver = "org.sqlite.JDBC",
         )
+        // Schema is created idempotently — `SchemaUtils.create` is a CREATE
+        // TABLE IF NOT EXISTS at the DDL level, so safe to re-run on every
+        // boot. Migrations beyond this are out of scope for v0.1.0 (PRD §2.2).
+        transaction(handle) {
+            SchemaUtils.create(Trainings, TrainingEvents)
+        }
         log.info(
             "SQLite connected at {} (WAL: {})",
             config.sqlitePath,

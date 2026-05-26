@@ -42,3 +42,10 @@ updates:
       - docker
     commit-message:
       prefix: "build(deps)"
+    ignore:
+      # Stay on JDK 21 — Tessera, Mosaic and Kotlin Gradle plugin 2.3.21 don't
+      # support running on newer LTS JDKs yet. Patch/minor of the 21.x line is
+      # fine and will still come through. Major bumps need to be coordinated
+      # across the whole NLP-Kotlin ecosystem first.
+      - dependency-name: "eclipse-temurin"
+        update-types: ["version-update:semver-major"]

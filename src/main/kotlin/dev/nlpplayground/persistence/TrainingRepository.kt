@@ -44,38 +44,49 @@ internal class TrainingRepository(
 
     private val log = LoggerFactory.getLogger(TrainingRepository::class.java)
 
-    /** Persist a brand-new training in the `QUEUED` state and emit the initial event. */
+    /**
+     * Persist a brand-new training and emit the initial event.
+     *
+     * Defaults to the [TrainingStatus.QUEUED] starting state for the normal
+     * upload flow. Pretrained corpora pass [initialStatus] = [TrainingStatus.READY]
+     * because they don't go through the queue — the artifacts already exist
+     * on the classpath, so the consumer pipeline is bypassed.
+     */
+    @Suppress("LongParameterList")
     fun create(
         corpusBlobKey: String,
         corpusSizeBytes: Long,
         corpusFilename: String?,
         id: String = UUID.randomUUID().toString(),
+        initialStatus: TrainingStatus = TrainingStatus.QUEUED,
+        modelBlobPrefix: String? = null,
     ): Training {
         val now = clock()
         return transaction(db) {
             Trainings.insert {
                 it[Trainings.id] = id
-                it[status] = TrainingStatus.QUEUED
+                it[status] = initialStatus
                 it[Trainings.corpusBlobKey] = corpusBlobKey
                 it[Trainings.corpusSizeBytes] = corpusSizeBytes
                 it[Trainings.corpusFilename] = corpusFilename
+                it[Trainings.modelBlobPrefix] = modelBlobPrefix
                 it[createdAt] = now.toEpochMilli()
                 it[updatedAt] = now.toEpochMilli()
             }
             events.record(
                 trainingId = id,
                 fromStatus = null,
-                toStatus = TrainingStatus.QUEUED,
+                toStatus = initialStatus,
                 detail = corpusFilename,
                 occurredAt = now,
             )
             Training(
                 id = id,
-                status = TrainingStatus.QUEUED,
+                status = initialStatus,
                 corpusBlobKey = corpusBlobKey,
                 corpusSizeBytes = corpusSizeBytes,
                 corpusFilename = corpusFilename,
-                modelBlobPrefix = null,
+                modelBlobPrefix = modelBlobPrefix,
                 errorMessage = null,
                 createdAt = now,
                 updatedAt = now,
@@ -105,6 +116,12 @@ internal class TrainingRepository(
     /**
      * Atomically validate the transition, update the row, and append an event.
      * Returns the new training snapshot, or null if the id is unknown.
+     *
+     * When [newStatus] equals the current status the call is a **no-op**: no
+     * event is recorded and no row update happens. This makes consumer-side
+     * pipeline replays idempotent (PRD §4.8) — if a worker crashed mid-step
+     * and the message is redelivered, the new worker can safely re-execute
+     * `updateStatus(DOWNLOADING)` even when the row already says DOWNLOADING.
      */
     @Suppress("LongParameterList")
     fun updateStatus(
@@ -118,6 +135,9 @@ internal class TrainingRepository(
         val current = Trainings.selectAll().where { Trainings.id eq id }.firstOrNull()
             ?: return@transaction null
         val from = current[Trainings.status]
+        if (from == newStatus) {
+            return@transaction current.toTraining()
+        }
         TrainingStateMachine.assertValidTransition(from, newStatus)
 
         val now = clock()

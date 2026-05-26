@@ -25,6 +25,11 @@ application {
 val ktorVersion = "3.5.0"
 val kotestVersion = "6.1.11"
 
+// PRD §6.13: Exposed has had breaking DSL changes across minor releases.
+// Pin to one exact version and bump deliberately (Dependabot groups handle the rest).
+val exposedVersion = "0.55.0"
+val testcontainersVersion = "1.20.4"
+
 dependencies {
     // Ktor server
     implementation("io.ktor:ktor-server-core-jvm:$ktorVersion")
@@ -35,8 +40,9 @@ dependencies {
     implementation("io.ktor:ktor-server-call-logging-jvm:$ktorVersion")
     implementation("io.ktor:ktor-server-config-yaml-jvm:$ktorVersion")
 
-    // Logging backend
+    // Logging backend + structured JSON encoder (Fase 5 finalizes the logback.xml wiring).
     implementation("ch.qos.logback:logback-classic:1.5.32")
+    implementation("net.logstash.logback:logstash-logback-encoder:8.1")
 
     // Serialization (transitively included by Ktor + Mosaic; kept explicit for clarity)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")
@@ -46,11 +52,29 @@ dependencies {
     implementation("com.github.HectorIFC:tessera:v0.0.7")
     implementation("com.github.HectorIFC:mosaic:v0.0.4")
 
+    // Persistence — SQLite + Exposed ORM.
+    implementation("org.jetbrains.exposed:exposed-core:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-dao:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
+    implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
+    implementation("org.xerial:sqlite-jdbc:3.46.1.3")
+
+    // Queue — RabbitMQ AMQP client.
+    implementation("com.rabbitmq:amqp-client:5.22.0")
+
+    // Blob storage — MinIO S3-compatible client.
+    implementation("io.minio:minio:8.5.17")
+
     // Tests
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")
     testImplementation("io.ktor:ktor-client-content-negotiation-jvm:$ktorVersion")
     testImplementation("io.kotest:kotest-runner-junit5:$kotestVersion")
     testImplementation("io.kotest:kotest-assertions-core:$kotestVersion")
+    // Testcontainers — used in Fase 2/3 for RabbitMQ + MinIO integration tests.
+    testImplementation("org.testcontainers:testcontainers:$testcontainersVersion")
+    testImplementation("org.testcontainers:junit-jupiter:$testcontainersVersion")
+    testImplementation("org.testcontainers:rabbitmq:$testcontainersVersion")
+    testImplementation("org.testcontainers:minio:$testcontainersVersion")
 }
 
 detekt {

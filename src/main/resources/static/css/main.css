@@ -854,6 +854,272 @@ textarea {
     font-weight: 600;
 }
 
+/* ===== Status badges + Timeline (Trainings dashboard / progress) ===== */
+
+.status-badge {
+    display: inline-block;
+    padding: 2px 10px;
+    border-radius: 12px;
+    font-family: var(--font-mono);
+    font-size: 11.5px;
+    font-weight: 600;
+    text-transform: lowercase;
+    border: 1px solid var(--border);
+    background: var(--bg-card);
+    color: var(--fg);
+}
+.status-queued     { border-color: var(--border-strong); color: var(--fg-muted); }
+.status-in-progress{ border-color: rgba(99, 102, 241, 0.45); background: var(--tessera-soft); color: var(--tessera-strong); }
+.status-ready      { border-color: rgba(74, 222, 128, 0.5); background: rgba(74, 222, 128, 0.12); color: var(--ok); }
+.status-failed     { border-color: rgba(248, 113, 113, 0.55); background: rgba(248, 113, 113, 0.12); color: var(--error); }
+.status-expired    { border-color: var(--border-strong); background: var(--bg-input); color: var(--fg-dim); }
+.status-stuck      { box-shadow: 0 0 0 1px var(--warn); }
+
+.mono-id {
+    font-family: var(--font-mono);
+    font-size: 12px;
+    color: var(--fg-muted);
+}
+
+.error-banner {
+    margin-top: 16px;
+    padding: 12px 14px;
+    border-radius: var(--radius-sm);
+    background: rgba(248, 113, 113, 0.08);
+    border: 1px solid rgba(248, 113, 113, 0.45);
+    border-left: 3px solid var(--error);
+    color: var(--error);
+    font-size: 13.5px;
+}
+
+/* ===== Progress page ===== */
+
+.progress-main {
+    padding: 32px 0 0;
+    max-width: 720px;
+}
+
+.progress-hero h1 {
+    margin: 0 0 6px;
+    font-size: 24px;
+    letter-spacing: -0.01em;
+}
+
+.timeline {
+    list-style: none;
+    padding: 0;
+    margin: 32px 0;
+    border-left: 1px solid var(--border);
+}
+
+.timeline-step {
+    position: relative;
+    padding: 12px 0 12px 28px;
+    transition: opacity var(--transition);
+}
+
+.timeline-step .timeline-marker {
+    position: absolute;
+    left: -8px;
+    top: 16px;
+    width: 14px;
+    height: 14px;
+    border-radius: 50%;
+    background: var(--bg-input);
+    border: 2px solid var(--border-strong);
+    box-sizing: border-box;
+    transition: all var(--transition);
+}
+
+.timeline-body {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.timeline-body strong {
+    font-size: 14px;
+    color: var(--fg);
+    font-weight: 500;
+}
+
+.timeline-hint {
+    font-size: 12.5px;
+    color: var(--fg-muted);
+}
+
+.timeline-step.step-pending {
+    opacity: 0.6;
+}
+
+.timeline-step.step-done .timeline-marker {
+    background: var(--ok);
+    border-color: var(--ok);
+}
+
+.timeline-step.step-active .timeline-marker {
+    background: var(--mosaic);
+    border-color: var(--mosaic);
+    box-shadow: 0 0 0 6px var(--mosaic-soft);
+    animation: pulse-marker 1.6s ease-in-out infinite;
+}
+
+@keyframes pulse-marker {
+    0%, 100% { box-shadow: 0 0 0 6px var(--mosaic-soft); }
+    50%      { box-shadow: 0 0 0 10px rgba(234, 88, 12, 0.05); }
+}
+
+/* ===== Trainings dashboard ===== */
+
+.trainings-main {
+    padding: 32px 0 0;
+}
+
+.trainings-hero h1 {
+    margin: 0 0 6px;
+    font-size: 26px;
+    letter-spacing: -0.01em;
+}
+
+.filters {
+    margin: 20px 0;
+    display: flex;
+    gap: 24px;
+    flex-wrap: wrap;
+    align-items: center;
+}
+
+.filter-group {
+    border: 1px solid var(--border);
+    border-radius: var(--radius-sm);
+    padding: 8px 14px 10px;
+    margin: 0;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px 14px;
+    align-items: center;
+    background: var(--bg-card);
+}
+
+.filter-group legend {
+    padding: 0 6px;
+    color: var(--fg-muted);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.06em;
+}
+
+.filter-group label {
+    font-size: 13px;
+    color: var(--fg);
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    cursor: pointer;
+}
+
+.filter-meta {
+    margin-left: auto;
+    font-size: 13px;
+}
+
+.trainings-table-wrap {
+    overflow-x: auto;
+    background: var(--bg-card);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+}
+
+.trainings-table {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 13.5px;
+}
+
+.trainings-table th,
+.trainings-table td {
+    padding: 10px 14px;
+    text-align: left;
+    border-bottom: 1px solid var(--border);
+}
+
+.trainings-table th {
+    font-weight: 500;
+    color: var(--fg-muted);
+    font-size: 11.5px;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    background: var(--bg-elevated);
+    position: sticky;
+    top: 0;
+    z-index: 1;
+}
+
+.trainings-row:hover {
+    background: rgba(255, 255, 255, 0.02);
+}
+
+.trainings-detail {
+    background: var(--bg-elevated);
+}
+
+.trainings-detail td {
+    padding: 14px 20px;
+}
+
+.col-id      { width: 100px; }
+.col-status  { width: 130px; }
+.col-name    { font-family: var(--font-mono); font-size: 12.5px; }
+.col-created,
+.col-updated { width: 120px; }
+.col-actions { width: 180px; text-align: right; }
+
+.action-link {
+    display: inline-block;
+    font-family: inherit;
+    font-size: 12.5px;
+    color: var(--tessera-strong);
+    background: transparent;
+    border: 1px solid var(--border-strong);
+    border-radius: var(--radius-xs);
+    padding: 4px 10px;
+    margin-left: 6px;
+    cursor: pointer;
+    text-decoration: none;
+}
+
+.action-link:hover {
+    background: var(--tessera-soft);
+    border-color: var(--tessera);
+    color: var(--tessera-strong);
+    text-decoration: none;
+}
+
+.event-timeline {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+}
+
+.event-timeline li {
+    display: grid;
+    grid-template-columns: 100px 220px 1fr;
+    gap: 12px;
+    padding: 6px 0;
+    font-size: 12.5px;
+    border-bottom: 1px solid var(--border);
+}
+
+.event-timeline li:last-child { border-bottom: 0; }
+
+.event-when { color: var(--fg-muted); font-family: var(--font-mono); }
+.event-arrow strong { color: var(--mosaic-strong); }
+
+.ecosystem a.active {
+    color: var(--fg);
+    background: var(--bg-overlay);
+}
+
 /* ===== Responsive ===== */
 
 @media (max-width: 720px) {

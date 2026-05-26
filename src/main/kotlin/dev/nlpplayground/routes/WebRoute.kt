@@ -24,6 +24,13 @@ internal fun Route.webRoutes() {
     get("/training/{id}/progress") {
         call.serveStatic("/static/training/progress.html", fallback = PROGRESS_PLACEHOLDER)
     }
+
+    // Extensionless URL for the Trainings dashboard. The static handler
+    // serves `/trainings.html` if you type the `.html` suffix, but the nav
+    // link is `/trainings` for readability.
+    get("/trainings") {
+        call.serveStatic("/static/trainings.html")
+    }
 }
 
 private suspend fun ApplicationCall.serveStatic(path: String, fallback: String? = null) {

@@ -1,10 +1,14 @@
 package dev.nlpplayground
 
 import dev.nlpplayground.messaging.RabbitConnection
+import dev.nlpplayground.messaging.TrainingPublisher
 import dev.nlpplayground.persistence.PlaygroundDatabase
+import dev.nlpplayground.persistence.TrainingEventRepository
+import dev.nlpplayground.persistence.TrainingRepository
 import dev.nlpplayground.pipeline.PipelineService
 import dev.nlpplayground.session.SessionEvictionScheduler
 import dev.nlpplayground.session.SessionStore
+import dev.nlpplayground.storage.BlobStorage
 import dev.nlpplayground.storage.MinioBlobStorage
 
 /**
@@ -17,20 +21,24 @@ import dev.nlpplayground.storage.MinioBlobStorage
  *   must invoke [close] on shutdown (`Application.kt` wires the hook).
  * - [scheduler] is started on application start and stopped on shutdown.
  * - [sessions] and [pipelineService] are plain in-memory values — they will
- *   be retired in Fase 1 once the SQLite-backed `TrainingRepository` lands.
+ *   be retired in Fase 3 once routes flip to use `TrainingRepository` directly.
  */
 internal class AppContext(
     val config: Config = Config.fromEnv(),
     databaseFactory: (Config) -> PlaygroundDatabase = ::PlaygroundDatabase,
-    storageFactory: (Config) -> MinioBlobStorage = ::MinioBlobStorage,
+    storageFactory: (Config) -> BlobStorage = ::MinioBlobStorage,
     rabbitFactory: (Config) -> RabbitConnection = ::RabbitConnection,
+    publisherFactory: (RabbitConnection) -> TrainingPublisher = ::TrainingPublisher,
     val sessions: SessionStore = SessionStore(),
     val pipelineService: PipelineService = PipelineService(),
 ) {
 
     val database: PlaygroundDatabase = databaseFactory(config)
-    val storage: MinioBlobStorage = storageFactory(config)
+    val storage: BlobStorage = storageFactory(config)
     val rabbit: RabbitConnection = rabbitFactory(config)
+    val publisher: TrainingPublisher = publisherFactory(rabbit)
+    val events: TrainingEventRepository = TrainingEventRepository(database.handle)
+    val trainings: TrainingRepository = TrainingRepository(database.handle, events)
     val scheduler: SessionEvictionScheduler = SessionEvictionScheduler(sessions)
 
     fun close() {

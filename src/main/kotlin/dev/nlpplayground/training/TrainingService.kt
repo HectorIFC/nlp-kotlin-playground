@@ -2,11 +2,13 @@ package dev.nlpplayground.training
 
 import dev.nlpplayground.Config
 import dev.nlpplayground.messaging.TrainingMessage
+import dev.nlpplayground.observability.MetricsRegistry
 import dev.nlpplayground.persistence.TrainingRepository
 import dev.nlpplayground.pipeline.CorpusTrainer
 import dev.nlpplayground.pipeline.Pipeline
 import dev.nlpplayground.storage.BlobStorage
 import org.slf4j.LoggerFactory
+import org.slf4j.MDC
 import java.nio.file.Files
 import java.nio.file.Path
 import java.time.Duration
@@ -49,12 +51,24 @@ internal class TrainingService(
     private val storage: BlobStorage,
     private val trainings: TrainingRepository,
     private val trainer: PipelineTrainer = DefaultPipelineTrainer,
+    private val metrics: MetricsRegistry = MetricsRegistry(),
     private val clock: () -> Instant = Instant::now,
 ) {
 
     private val log = LoggerFactory.getLogger(TrainingService::class.java)
 
     fun process(message: TrainingMessage): ProcessOutcome {
+        // Tag every log line produced under this call with training_id so the
+        // structured-log shipper can correlate across worker threads (PRD §6.14).
+        MDC.put(MDC_KEY, message.trainingId)
+        try {
+            return processInner(message)
+        } finally {
+            MDC.remove(MDC_KEY)
+        }
+    }
+
+    private fun processInner(message: TrainingMessage): ProcessOutcome {
         val current = trainings.findById(message.trainingId)
         if (current == null) {
             log.warn("Received message for unknown training {}, discarding", message.trainingId)
@@ -69,7 +83,7 @@ internal class TrainingService(
                 )
                 return ProcessOutcome.SUCCESS
             }
-            TrainingStatus.QUEUED -> Unit
+            TrainingStatus.QUEUED -> metrics.recordQueued()
             else -> log.warn(
                 "Training {} found in intermediate state {}, reprocessing",
                 message.trainingId,
@@ -113,6 +127,7 @@ internal class TrainingService(
             runCatching { storage.delete(config.corpusBucket, message.blobKey) }
                 .onFailure { log.warn("Failed to delete source blob {}", message.blobKey, it) }
 
+            metrics.recordCompleted()
             log.info("Training {} READY", id)
             ProcessOutcome.SUCCESS
         } catch (e: Exception) {
@@ -122,6 +137,7 @@ internal class TrainingService(
                 newStatus = TrainingStatus.FAILED,
                 errorMessage = e.message ?: e::class.java.simpleName,
             )
+            metrics.recordFailed()
             ProcessOutcome.FAILED
         } finally {
             runCatching { Files.deleteIfExists(tempFile) }
@@ -177,3 +193,5 @@ internal fun interface PipelineTrainer {
 }
 
 internal val DefaultPipelineTrainer = PipelineTrainer { id, corpus -> CorpusTrainer.train(id, corpus) }
+
+internal const val MDC_KEY = "training_id"

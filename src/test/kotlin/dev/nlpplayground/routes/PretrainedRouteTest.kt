@@ -41,7 +41,7 @@ class PretrainedRouteTest :
                 response.status shouldBe HttpStatusCode.Created
                 val body: StartSessionResponse = response.body()
                 body.name shouldBe "alice-in-wonderland"
-                body.sessionId.isNotBlank() shouldBe true
+                body.trainingId.isNotBlank() shouldBe true
             }
         }
     })

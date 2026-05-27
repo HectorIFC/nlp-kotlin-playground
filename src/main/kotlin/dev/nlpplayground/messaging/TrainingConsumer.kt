@@ -33,27 +33,44 @@ internal class TrainingConsumer(
     private val json: Json = Json,
 ) {
 
+    init {
+        require(workerCount >= 1) {
+            "workerCount must be >= 1 (was $workerCount). Set CONSUMER_CONCURRENCY in env if overriding."
+        }
+    }
+
     private val log = LoggerFactory.getLogger(TrainingConsumer::class.java)
     private val running = AtomicBoolean(false)
     private val workerChannels = mutableListOf<Channel>()
 
+    @Suppress("TooGenericExceptionCaught")
     fun start() {
         check(running.compareAndSet(false, true)) { "Consumer pool already started" }
-        repeat(workerCount) { index ->
-            val channel = rabbit.newChannel()
-            // Declare topology on each worker channel — `queueDeclare` is idempotent,
-            // so the producer-declared definitions stay authoritative.
-            QueueTopology.declare(channel)
-            channel.basicQos(PREFETCH_COUNT)
-            // Args: queue, autoAck=false, consumerTag, callback.
-            val tag = channel.basicConsume(
-                QueueTopology.QUEUE,
-                false,
-                "training-worker-$index",
-                MessageHandler(channel, service, json, log, running),
-            )
-            workerChannels += channel
-            log.info("Worker {} subscribed to {} (consumerTag={})", index, QueueTopology.QUEUE, tag)
+        try {
+            repeat(workerCount) { index ->
+                val channel = rabbit.newChannel()
+                // Declare topology on each worker channel — `queueDeclare` is idempotent,
+                // so the producer-declared definitions stay authoritative.
+                QueueTopology.declare(channel)
+                channel.basicQos(PREFETCH_COUNT)
+                // Args: queue, autoAck=false, consumerTag, callback.
+                val tag = channel.basicConsume(
+                    QueueTopology.QUEUE,
+                    false,
+                    "training-worker-$index",
+                    MessageHandler(channel, service, json, log, running),
+                )
+                workerChannels += channel
+                log.info("Worker {} subscribed to {} (consumerTag={})", index, QueueTopology.QUEUE, tag)
+            }
+        } catch (e: Exception) {
+            // Bootstrap failed mid-loop: roll back so callers can retry start()
+            // without leaking channels or leaving `running=true` indefinitely.
+            log.error("Worker pool failed to start; rolling back partial state", e)
+            workerChannels.forEach { ch -> runCatching { ch.close() } }
+            workerChannels.clear()
+            running.set(false)
+            throw e
         }
     }
 

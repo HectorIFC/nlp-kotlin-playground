@@ -96,7 +96,21 @@ internal class TrainingService(
     @Suppress("TooGenericExceptionCaught")
     private fun runPipeline(message: TrainingMessage): ProcessOutcome {
         val id = message.trainingId
-        val tempFile: Path = Files.createTempFile("corpus-$id-", ".txt")
+        // Tempfile creation itself can blow up on disk pressure / permissions.
+        // Mark FAILED + report ProcessOutcome.FAILED so the consumer nacks the
+        // message into the DLQ instead of silently throwing past the contract.
+        val tempFile: Path = try {
+            Files.createTempFile("corpus-$id-", ".txt")
+        } catch (e: Exception) {
+            log.error("Could not create temp file for training {}", id, e)
+            trainings.updateStatus(
+                id = id,
+                newStatus = TrainingStatus.FAILED,
+                errorMessage = "Failed to allocate scratch space: ${e.message}",
+            )
+            metrics.recordFailed()
+            return ProcessOutcome.FAILED
+        }
         return try {
             trainings.updateStatus(id, TrainingStatus.DOWNLOADING, detail = "downloading from MinIO")
             Files.newOutputStream(tempFile).use { sink ->

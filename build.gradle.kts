@@ -58,6 +58,10 @@ dependencies {
     implementation("org.jetbrains.exposed:exposed-jdbc:$exposedVersion")
     implementation("org.jetbrains.exposed:exposed-java-time:$exposedVersion")
     implementation("org.xerial:sqlite-jdbc:3.46.1.3")
+    // HikariCP — pool with `connectionInitSql` so connection-scoped PRAGMAs
+    // (foreign_keys, busy_timeout) are applied to every Exposed-managed
+    // connection, not just the throwaway used to set WAL mode.
+    implementation("com.zaxxer:HikariCP:6.2.1")
 
     // Queue — RabbitMQ AMQP client.
     implementation("com.rabbitmq:amqp-client:5.22.0")

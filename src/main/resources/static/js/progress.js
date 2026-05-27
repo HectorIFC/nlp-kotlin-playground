@@ -29,8 +29,11 @@ async function pollLoop(trainingId) {
             await sleep(POLL_INTERVAL_MS);
             continue;
         }
-        updateTimeline(detail);
+        // Don't repaint the timeline when we're already in a terminal state —
+        // a `failed` poll would otherwise reset every step to pending and erase
+        // the "we got this far" signal the user wants to see.
         if (detail.status === "ready") {
+            updateTimeline(detail);
             // Small grace period so the "ready" tick visibly lights up before the redirect.
             await sleep(300);
             window.location.href = `/explore/${trainingId}`;
@@ -44,6 +47,7 @@ async function pollLoop(trainingId) {
             showError("Training expired before it could be loaded. Upload the corpus again.");
             return;
         }
+        updateTimeline(detail);
         await sleep(POLL_INTERVAL_MS);
     }
 }

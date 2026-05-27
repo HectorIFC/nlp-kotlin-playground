@@ -164,7 +164,7 @@ Useful env vars (defaults match the compose file):
 |---|---|---|---|
 | `GET`  | `/health` | — | `200` when SQLite + MinIO + RabbitMQ are all reachable, `503` otherwise |
 | `GET`  | `/pretrained` | — | `{ available: [name, …] }` |
-| `POST` | `/pretrained/{name}` | — | `{ sessionId, name }` — the id is the training_id of the pretrained row |
+| `POST` | `/pretrained/{name}` | — | `201 { trainingId, name }` — bundled corpora are persisted as a READY training row |
 | `POST` | `/upload` | `multipart/form-data` (`file` ≤ 2 MB UTF-8) | `202 { trainingId, status, statusUrl, progressUrl }` |
 | `GET`  | `/api/training/{id}` | — | training detail + event timeline |
 | `GET`  | `/api/trainings` | — | paginated list, filter by `status=` + `since=` + `limit=` |

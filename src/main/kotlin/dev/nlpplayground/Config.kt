@@ -58,13 +58,41 @@ internal data class Config(
             corpusBucket = env("MINIO_CORPUS_BUCKET") ?: DEFAULT_CORPUS_BUCKET,
             modelsBucket = env("MINIO_MODELS_BUCKET") ?: DEFAULT_MODELS_BUCKET,
             rabbitHost = env("RABBITMQ_HOST") ?: DEFAULT_RABBIT_HOST,
-            rabbitPort = env("RABBITMQ_PORT")?.toInt() ?: DEFAULT_RABBIT_PORT,
+            rabbitPort = env.parsePort("RABBITMQ_PORT", DEFAULT_RABBIT_PORT),
             rabbitUser = env("RABBITMQ_USER") ?: DEFAULT_RABBIT_USER,
             rabbitPass = env("RABBITMQ_PASS") ?: DEFAULT_RABBIT_PASS,
             sqlitePath = env("SQLITE_PATH") ?: DEFAULT_SQLITE_PATH,
-            consumerConcurrency = env("CONSUMER_CONCURRENCY")?.toInt() ?: DEFAULT_CONSUMER_CONCURRENCY,
-            maxCorpusSizeBytes = env("MAX_CORPUS_SIZE_BYTES")?.toLong() ?: DEFAULT_MAX_CORPUS_SIZE_BYTES,
-            trainingTtlHours = env("TRAINING_TTL_HOURS")?.toLong() ?: DEFAULT_TRAINING_TTL_HOURS,
+            consumerConcurrency = env.parsePositiveInt("CONSUMER_CONCURRENCY", DEFAULT_CONSUMER_CONCURRENCY),
+            maxCorpusSizeBytes = env.parsePositiveLong("MAX_CORPUS_SIZE_BYTES", DEFAULT_MAX_CORPUS_SIZE_BYTES),
+            trainingTtlHours = env.parsePositiveLong("TRAINING_TTL_HOURS", DEFAULT_TRAINING_TTL_HOURS),
         )
+
+        private fun ((String) -> String?).parsePort(name: String, default: Int): Int {
+            val raw = invoke(name) ?: return default
+            val parsed = raw.toIntOrNull()
+                ?: error("Invalid $name='$raw' — expected an integer between 1 and 65535")
+            require(parsed in 1..PORT_MAX) {
+                "Invalid $name=$parsed — must be in 1..65535"
+            }
+            return parsed
+        }
+
+        private fun ((String) -> String?).parsePositiveInt(name: String, default: Int): Int {
+            val raw = invoke(name) ?: return default
+            val parsed = raw.toIntOrNull()
+                ?: error("Invalid $name='$raw' — expected a positive integer")
+            require(parsed > 0) { "Invalid $name=$parsed — must be positive" }
+            return parsed
+        }
+
+        private fun ((String) -> String?).parsePositiveLong(name: String, default: Long): Long {
+            val raw = invoke(name) ?: return default
+            val parsed = raw.toLongOrNull()
+                ?: error("Invalid $name='$raw' — expected a positive long")
+            require(parsed > 0) { "Invalid $name=$parsed — must be positive" }
+            return parsed
+        }
+
+        private const val PORT_MAX = 65_535
     }
 }

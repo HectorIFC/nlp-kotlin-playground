@@ -49,7 +49,7 @@ internal fun Route.pretrainedRoutes(ctx: AppContext) {
             )
             call.respond(
                 HttpStatusCode.Created,
-                StartSessionResponse(sessionId = trainingId, name = name),
+                StartSessionResponse(trainingId = trainingId, name = name),
             )
         }
     }

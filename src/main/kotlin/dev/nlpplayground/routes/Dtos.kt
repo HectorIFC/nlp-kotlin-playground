@@ -38,17 +38,6 @@ internal data class SimilarityRequest(val textA: String, val textB: String)
 internal data class SimilarityResponse(val textA: String, val textB: String, val score: Float)
 
 @Serializable
-internal data class StatusResponse(
-    val sessionId: String,
-    val state: String,
-    val name: String? = null,
-    val error: String? = null,
-)
-
-@Serializable
-internal data class UploadResponse(val sessionId: String, val state: String)
-
-@Serializable
 internal data class UploadAcceptedResponse(
     val trainingId: String,
     val status: String,
@@ -91,7 +80,7 @@ internal data class TrainingListItem(
 internal data class TrainingListResponse(val items: List<TrainingListItem>)
 
 @Serializable
-internal data class StartSessionResponse(val sessionId: String, val name: String)
+internal data class StartSessionResponse(val trainingId: String, val name: String)
 
 @Serializable
 internal data class ErrorResponse(val error: String, val detail: String? = null)

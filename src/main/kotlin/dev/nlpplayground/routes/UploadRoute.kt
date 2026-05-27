@@ -95,57 +95,13 @@ private suspend fun parseMultipart(multipart: io.ktor.http.content.MultiPartData
     return ParsedUpload(bytes, filename, tooLarge)
 }
 
-@Suppress("TooGenericExceptionCaught")
 private suspend fun handleAccepted(call: ApplicationCall, ctx: AppContext, bytes: ByteArray, filename: String?) {
     val trainingId = UUID.randomUUID().toString()
     val blobKey = "$trainingId.txt"
 
-    // 1. Upload to MinIO first — the message we publish later references this blob.
-    try {
-        ctx.storage.upload(
-            bucket = ctx.config.corpusBucket,
-            key = blobKey,
-            bytes = bytes,
-            contentType = "text/plain; charset=utf-8",
-        )
-    } catch (e: Exception) {
-        log.error("Upload to MinIO failed for {}", trainingId, e)
-        return call.respond(
-            HttpStatusCode.InternalServerError,
-            ErrorResponse("Storage unavailable", e.message),
-        )
-    }
-
-    // 2. Persist QUEUED row + initial event.
-    ctx.trainings.create(
-        corpusBlobKey = blobKey,
-        corpusSizeBytes = bytes.size.toLong(),
-        corpusFilename = filename,
-        id = trainingId,
-    )
-
-    // 3. Publish to RabbitMQ. On failure, mark the training FAILED so the dashboard
-    // surfaces it immediately rather than leaving a zombie QUEUED row.
-    try {
-        ctx.publisher.publish(
-            TrainingMessage(
-                trainingId = trainingId,
-                blobKey = blobKey,
-                submittedAt = System.currentTimeMillis(),
-            ),
-        )
-    } catch (e: Exception) {
-        log.error("Publish failed for {}; marking training FAILED", trainingId, e)
-        ctx.trainings.updateStatus(
-            id = trainingId,
-            newStatus = TrainingStatus.FAILED,
-            errorMessage = "Could not publish to queue: ${e.message}",
-        )
-        return call.respond(
-            HttpStatusCode.InternalServerError,
-            ErrorResponse("Queue unavailable", e.message),
-        )
-    }
+    if (!uploadCorpus(call, ctx, blobKey, bytes)) return
+    if (!persistTraining(call, ctx, blobKey, trainingId, bytes.size.toLong(), filename)) return
+    if (!publishMessage(call, ctx, trainingId, blobKey)) return
 
     call.respond(
         HttpStatusCode.Accepted,
@@ -156,6 +112,68 @@ private suspend fun handleAccepted(call: ApplicationCall, ctx: AppContext, bytes
             progressUrl = "/training/$trainingId/progress",
         ),
     )
+}
+
+@Suppress("TooGenericExceptionCaught")
+private suspend fun uploadCorpus(call: ApplicationCall, ctx: AppContext, blobKey: String, bytes: ByteArray): Boolean =
+    try {
+        ctx.storage.upload(ctx.config.corpusBucket, blobKey, bytes, "text/plain; charset=utf-8")
+        true
+    } catch (e: Exception) {
+        log.error("Upload to MinIO failed for {}", blobKey, e)
+        call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Storage unavailable", e.message))
+        false
+    }
+
+@Suppress("LongParameterList", "TooGenericExceptionCaught")
+private suspend fun persistTraining(
+    call: ApplicationCall,
+    ctx: AppContext,
+    blobKey: String,
+    trainingId: String,
+    sizeBytes: Long,
+    filename: String?,
+): Boolean = try {
+    ctx.trainings.create(
+        corpusBlobKey = blobKey,
+        corpusSizeBytes = sizeBytes,
+        corpusFilename = filename,
+        id = trainingId,
+    )
+    true
+} catch (e: Exception) {
+    log.error("Failed to persist training row for {}; cleaning up uploaded blob", trainingId, e)
+    compensatingDelete(ctx, blobKey)
+    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Database unavailable", e.message))
+    false
+}
+
+@Suppress("TooGenericExceptionCaught")
+private suspend fun publishMessage(
+    call: ApplicationCall,
+    ctx: AppContext,
+    trainingId: String,
+    blobKey: String,
+): Boolean = try {
+    ctx.publisher.publish(TrainingMessage(trainingId, blobKey, System.currentTimeMillis()))
+    true
+} catch (e: Exception) {
+    // Mark FAILED so the dashboard surfaces the failure, and clean the
+    // already-uploaded corpus blob since nothing else will reference it.
+    log.error("Publish failed for {}; marking training FAILED + cleaning blob", trainingId, e)
+    ctx.trainings.updateStatus(
+        id = trainingId,
+        newStatus = TrainingStatus.FAILED,
+        errorMessage = "Could not publish to queue: ${e.message}",
+    )
+    compensatingDelete(ctx, blobKey)
+    call.respond(HttpStatusCode.InternalServerError, ErrorResponse("Queue unavailable", e.message))
+    false
+}
+
+private fun compensatingDelete(ctx: AppContext, blobKey: String) {
+    runCatching { ctx.storage.delete(ctx.config.corpusBucket, blobKey) }
+        .onFailure { c -> log.warn("Compensating blob delete failed for {}", blobKey, c) }
 }
 
 /**

@@ -50,7 +50,7 @@ class TrainingRouteTest :
                 val ctx = testAppContext()
                 val a = ctx.trainings.create("a.txt", 1, null).id
                 val b = ctx.trainings.create("b.txt", 1, null).id
-                ctx.trainings.create("c.txt", 1, null)
+                val c = ctx.trainings.create("c.txt", 1, null).id
                 ctx.trainings.updateStatus(a, TrainingStatus.FAILED, errorMessage = "boom")
                 ctx.trainings.updateStatus(b, TrainingStatus.DOWNLOADING)
                 installApp(ctx)
@@ -63,10 +63,7 @@ class TrainingRouteTest :
                 val activeResp = testClient().get("/api/trainings/active")
                 val activeBody: TrainingListResponse = activeResp.body()
                 // c is QUEUED, b is DOWNLOADING — both are "active". a is FAILED → excluded.
-                activeBody.items.map { it.id }.toSet() shouldBe setOf(b, "c-stand-in").let {
-                    activeBody.items.map { item -> item.id }.toSet()
-                }
-                activeBody.items.size shouldBe 2
+                activeBody.items.map { it.id }.toSet() shouldBe setOf(b, c)
             }
         }
 

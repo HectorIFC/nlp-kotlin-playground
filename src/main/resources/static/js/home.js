@@ -38,12 +38,10 @@ async function loadPretrained(name, button) {
     const original = button.textContent;
     button.textContent = `Loading ${name}…`;
     try {
-        // Backend still returns the key `sessionId` for compat with the
-        // existing JSON shape, but the value is a training_id under the hood.
-        const { sessionId } = await postEmpty(`/pretrained/${encodeURIComponent(name)}`);
+        const { trainingId } = await postEmpty(`/pretrained/${encodeURIComponent(name)}`);
         // Pre-trained corpora are persisted in the trainings table directly as
         // READY, so we can skip the progress page and jump to /explore.
-        window.location.href = `/explore/${sessionId}`;
+        window.location.href = `/explore/${trainingId}`;
     } catch (e) {
         button.disabled = false;
         button.textContent = original;

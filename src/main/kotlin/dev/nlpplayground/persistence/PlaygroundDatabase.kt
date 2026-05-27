@@ -1,5 +1,7 @@
 package dev.nlpplayground.persistence
 
+import com.zaxxer.hikari.HikariConfig
+import com.zaxxer.hikari.HikariDataSource
 import dev.nlpplayground.Config
 import org.jetbrains.exposed.sql.Database
 import org.jetbrains.exposed.sql.SchemaUtils
@@ -14,47 +16,61 @@ import java.sql.DriverManager
  * `Database.connect` to be called once before any `transaction { ... }` block
  * (PRD §6.4).
  *
- * WAL mode (PRD §6.3) lets the producer keep reading while a consumer worker
- * is writing — otherwise concurrent updates hit `SQLITE_BUSY`. Schema creation
- * is deferred to Fase 1 (when `Trainings` and `TrainingEvents` tables land).
+ * Two PRAGMA flavours and where each is applied:
+ *
+ * - `journal_mode=WAL` (PRD §6.3) is a **file-level** SQLite setting — once
+ *   set, it persists in the database header. We apply it once at startup via
+ *   a raw JDBC connection (Exposed wraps every statement in BEGIN/COMMIT,
+ *   and SQLite refuses `journal_mode=WAL` inside a transaction).
+ * - `foreign_keys=ON` and `busy_timeout=5000` are **per-connection** PRAGMAs.
+ *   They have to be applied to every JDBC connection Exposed acquires, which
+ *   is why we route the runtime through HikariCP with `connectionInitSql`.
+ *
+ * `:memory:` databases don't support WAL — the PRAGMA block is skipped there.
  */
 internal open class PlaygroundDatabase(private val config: Config) {
 
     private val log = LoggerFactory.getLogger(PlaygroundDatabase::class.java)
     val handle: Database
+    private val dataSource: HikariDataSource?
 
     init {
         ensureParentDir(config.sqlitePath)
-        // SQLite refuses `PRAGMA journal_mode=WAL` while inside an active
-        // transaction (Exposed wraps every `exec` in BEGIN/COMMIT). Run the
-        // PRAGMAs through a raw JDBC connection with autoCommit BEFORE Exposed
-        // takes over — WAL mode is persisted in the SQLite file header, so the
-        // Exposed-managed connections that come later pick it up automatically.
-        // `:memory:` databases don't support WAL — skip the PRAGMA block there.
+        val jdbcUrl = "jdbc:sqlite:${config.sqlitePath}"
+
         if (config.sqlitePath != ":memory:") {
-            DriverManager.getConnection("jdbc:sqlite:${config.sqlitePath}").use { conn ->
+            // One-time WAL switch (persisted in the SQLite file header).
+            DriverManager.getConnection(jdbcUrl).use { conn ->
                 conn.autoCommit = true
-                conn.createStatement().use { stmt ->
-                    stmt.execute("PRAGMA journal_mode=WAL;")
-                    stmt.execute("PRAGMA foreign_keys=ON;")
-                    stmt.execute("PRAGMA busy_timeout=5000;")
-                }
+                conn.createStatement().use { it.execute("PRAGMA journal_mode=WAL;") }
             }
         }
-        handle = Database.connect(
-            url = "jdbc:sqlite:${config.sqlitePath}",
-            driver = "org.sqlite.JDBC",
+
+        // HikariCP pool with init SQL ensures every Exposed-managed connection
+        // gets the per-connection PRAGMAs we care about.
+        dataSource = HikariDataSource(
+            HikariConfig().apply {
+                this.jdbcUrl = jdbcUrl
+                driverClassName = "org.sqlite.JDBC"
+                connectionInitSql = "PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000;"
+                // SQLite serializes writes regardless; keep the pool small so
+                // SQLITE_BUSY contention is rare. Two consumers + the producer
+                // need a handful of connections at most.
+                maximumPoolSize = MAX_POOL_SIZE
+                poolName = "playground-sqlite"
+            },
         )
-        // Schema is created idempotently — `SchemaUtils.create` is a CREATE
-        // TABLE IF NOT EXISTS at the DDL level, so safe to re-run on every
-        // boot. Migrations beyond this are out of scope for v0.1.0 (PRD §2.2).
+        handle = Database.connect(dataSource)
+
         transaction(handle) {
             SchemaUtils.create(Trainings, TrainingEvents)
         }
+
         log.info(
-            "SQLite connected at {} (WAL: {})",
+            "SQLite connected at {} (WAL: {}, pool size: {})",
             config.sqlitePath,
             config.sqlitePath != ":memory:",
+            MAX_POOL_SIZE,
         )
     }
 
@@ -65,9 +81,17 @@ internal open class PlaygroundDatabase(private val config: Config) {
         true
     }.getOrDefault(false)
 
+    fun close() {
+        dataSource?.close()
+    }
+
     private fun ensureParentDir(path: String) {
         if (path == ":memory:") return
         val parent = File(path).parentFile ?: return
         if (!parent.exists()) parent.mkdirs()
+    }
+
+    private companion object {
+        const val MAX_POOL_SIZE = 6
     }
 }

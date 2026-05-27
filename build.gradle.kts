@@ -67,7 +67,7 @@ dependencies {
     implementation("com.rabbitmq:amqp-client:5.22.0")
 
     // Blob storage — MinIO S3-compatible client.
-    implementation("io.minio:minio:8.5.17")
+    implementation("io.minio:minio:9.0.1")
 
     // Tests
     testImplementation("io.ktor:ktor-server-test-host-jvm:$ktorVersion")

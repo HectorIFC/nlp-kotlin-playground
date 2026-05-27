@@ -95,25 +95,57 @@ jobs:
           context: .
           push: false
           load: true
-          tags: nlp-kotlin-playground:ci-${{ github.run_id }}
+          tags: nlp-kotlin-playground:local
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-      - name: Smoke test /health
+      # Bring up the full compose stack — v0.1.0's /health only returns 200
+      # when SQLite, MinIO and RabbitMQ are all reachable, so a standalone
+      # `docker run` of the app container fails its healthcheck by design.
+      - name: Boot full compose stack
+        run: docker compose up -d --no-build
+
+      - name: Wait for app to become healthy
         run: |
-          docker run -d --name pg -p 8080:8080 nlp-kotlin-playground:ci-${{ github.run_id }}
-          # Wait up to 60s for the container to become healthy.
-          for i in $(seq 1 60); do
+          for i in $(seq 1 90); do
             if curl -fsS http://localhost:8080/health >/dev/null 2>&1; then
               echo "::notice::Healthcheck passed after ${i}s"
+              curl -s http://localhost:8080/health
               exit 0
             fi
             sleep 1
           done
-          echo "::error::Healthcheck never returned 200 within 60s"
-          docker logs pg
+          echo "::error::App never returned 200 on /health within 90s"
+          echo "--- compose status ---"
+          docker compose ps
+          echo "--- app logs ---"
+          docker compose logs app | tail -100
+          echo "--- minio logs ---"
+          docker compose logs minio | tail -30
+          echo "--- rabbitmq logs ---"
+          docker compose logs rabbitmq | tail -30
           exit 1
 
-      - name: Stop container
+      - name: Smoke test upload + queue + ready
+        run: |
+          set -euo pipefail
+          # Build a tiny corpus and upload it; the worker should drain it to READY.
+          printf 'The fox jumps over the lazy dog.\nThe dog sleeps.\n' > /tmp/smoke.txt
+          TID=$(curl -fsS -X POST http://localhost:8080/upload -F "file=@/tmp/smoke.txt" \
+                 | python3 -c "import json,sys;print(json.load(sys.stdin)['trainingId'])")
+          echo "trainingId=$TID"
+          for i in $(seq 1 60); do
+            STATE=$(curl -fsS "http://localhost:8080/api/training/$TID" \
+                    | python3 -c "import json,sys;print(json.load(sys.stdin)['status'])")
+            echo "[$i] state=$STATE"
+            [ "$STATE" = "ready" ] && { echo "::notice::Pipeline ready after ${i}s"; exit 0; }
+            [ "$STATE" = "failed" ] && { echo "::error::Training failed"; docker compose logs app | tail -50; exit 1; }
+            sleep 1
+          done
+          echo "::error::Training never reached READY within 60s"
+          docker compose logs app | tail -50
+          exit 1
+
+      - name: Tear down compose
         if: always()
-        run: docker rm -f pg || true
+        run: docker compose down -v || true

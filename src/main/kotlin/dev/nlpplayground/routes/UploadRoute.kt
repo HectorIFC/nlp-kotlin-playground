@@ -35,7 +35,7 @@ private val log = LoggerFactory.getLogger("uploadRoute")
 private data class ParsedUpload(val bytes: ByteArray?, val filename: String?, val tooLarge: Boolean)
 
 /**
- * `POST /upload` is now fully async (PRD §4.6):
+ * `POST /upload` is now fully async:
  *
  * 1. Validate size + UTF-8 + non-empty.
  * 2. PUT the raw bytes into `corpus-uploads/{trainingId}.txt` (MinIO).

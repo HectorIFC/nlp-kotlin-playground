@@ -48,7 +48,7 @@ class TrainingStateMachineTest :
             }
         }
 
-        "READY only transitions to EXPIRED, never back to in-progress states (PRD §6.12)" {
+        "READY only transitions to EXPIRED, never back to in-progress states" {
             TrainingStateMachine.allowedFrom(TrainingStatus.READY) shouldContainExactlyInAnyOrder
                 setOf(TrainingStatus.EXPIRED)
 

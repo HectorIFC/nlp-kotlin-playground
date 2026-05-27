@@ -7,7 +7,7 @@ import dev.nlpplayground.Config
 import org.slf4j.LoggerFactory
 
 /**
- * Single durable [Connection] for the JVM. Per PRD §6.5, RabbitMQ connections
+ * Single durable [Connection] for the JVM. RabbitMQ connections
  * are expensive; share one and create cheap [Channel]s per worker/handler.
  *
  * Queue topology (`training.exchange`, DLX, DLQ) is declared in Fase 2 via

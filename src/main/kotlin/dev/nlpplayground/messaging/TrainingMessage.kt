@@ -5,7 +5,7 @@ import kotlinx.serialization.Serializable
 
 /**
  * Wire payload published on `training.exchange` and consumed off
- * `training.queue`. Matches PRD §4.5 exactly.
+ * `training.queue`.
  *
  * The keys are snake_case so they read naturally in management-UI inspection
  * and survive consumer rewrites in other languages, should that ever happen.

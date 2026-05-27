@@ -5,7 +5,7 @@ package dev.nlpplayground
  * `docker-compose.yml` topology so the app boots cleanly in dev without any
  * env tweaks.
  *
- * Each field maps 1:1 to a variable in PRD §4.11. Kept as a plain data class
+ * Each field maps 1:1 to a variable. Kept as a plain data class
  * (no DI framework) — wired manually in [AppContext].
  */
 internal data class Config(
@@ -34,7 +34,7 @@ internal data class Config(
 ) {
 
     internal companion object {
-        // PRD §4.11 default values; each can be overridden via env.
+        // default values; each can be overridden via env.
         private const val DEFAULT_MINIO_ENDPOINT = "http://minio:9000"
         private const val DEFAULT_MINIO_ACCESS_KEY = "playground"
         private const val DEFAULT_MINIO_SECRET_KEY = "playground123"

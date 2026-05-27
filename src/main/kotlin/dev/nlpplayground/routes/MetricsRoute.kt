@@ -16,7 +16,7 @@ private val helpText: Map<String, String> = mapOf(
 /**
  * `GET /metrics` — Prometheus text format, no scrape-protocol negotiation.
  * Bare minimum to demonstrate observability scaffolding without pulling in
- * the Prometheus client lib (PRD §5 Fase 5).
+ * the Prometheus client lib.
  */
 internal fun Route.metricsRoute(ctx: AppContext) {
     get("/metrics") {

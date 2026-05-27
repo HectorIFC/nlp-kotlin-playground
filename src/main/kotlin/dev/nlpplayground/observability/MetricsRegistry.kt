@@ -3,7 +3,7 @@ package dev.nlpplayground.observability
 import java.util.concurrent.atomic.AtomicLong
 
 /**
- * Tiny in-process counters surfaced at `GET /metrics`. PRD §5 Fase 5 keeps
+ * Tiny in-process counters surfaced at `GET /metrics`. Fase 5 keeps
  * the dependency budget at zero — no Micrometer, no Prometheus client — so
  * the choice is simple `AtomicLong`s with a stable name → value contract.
  *

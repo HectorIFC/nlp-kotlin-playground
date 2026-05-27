@@ -101,7 +101,7 @@ class TrainingServiceTest :
             outcome shouldBe ProcessOutcome.SKIPPED
         }
 
-        "already-READY training short-circuits with SUCCESS (idempotency PRD §4.8)" {
+        "already-READY training short-circuits with SUCCESS (idempotency)" {
             val h = harness()
             val msg = seedQueued(h, "idem-1")
             h.service.process(msg) // first pass: real run

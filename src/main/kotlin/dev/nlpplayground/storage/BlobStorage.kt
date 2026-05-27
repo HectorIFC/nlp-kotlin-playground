@@ -6,7 +6,7 @@ import java.io.OutputStream
 /**
  * Object storage abstraction. The MinIO backend is the only production impl;
  * tests substitute an in-memory implementation that doesn't need a running
- * container. PRD §1.4 #1.
+ * container.
  *
  * Bucket lifecycle (creation, ILM rules) is handled by the `minio-init`
  * compose service, not here — this interface only deals with object-level

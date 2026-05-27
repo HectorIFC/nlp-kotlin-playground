@@ -1,6 +1,6 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!--
-    Structured JSON logging via Logstash encoder (PRD §5 Fase 5, §6.11).
+    Structured JSON logging via Logstash encoder .
 
     Each line is a self-contained JSON document including the SLF4J MDC,
     so `training_id` (set by CorrelationId plugin and TrainingService)

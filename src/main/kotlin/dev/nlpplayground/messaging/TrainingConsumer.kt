@@ -16,13 +16,13 @@ private const val SHUTDOWN_TIMEOUT_SECONDS = 30L
  * Consumer worker pool that drains `training.queue`. Each worker owns its own
  * AMQP [Channel] — channels aren't thread-safe and per-worker isolation lets
  * the runtime parallelize message processing on different threads without
- * extra synchronization (PRD §6.5).
+ * extra synchronization.
  *
  * `basicQos(prefetch=1)` ensures messages are handed out one at a time per
  * worker, so a slow training doesn't starve the queue out of fairness.
  *
  * Acks are explicit: success → `basicAck`, failure → `basicNack(requeue=false)`
- * which routes the message to the DLX. PRD §6.10 — graceful shutdown stops
+ * which routes the message to the DLX. graceful shutdown stops
  * accepting new messages and waits for in-flight ones to finish before
  * closing the underlying connection.
  */

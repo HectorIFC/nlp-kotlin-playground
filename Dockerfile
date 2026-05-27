@@ -14,7 +14,7 @@ COPY config config
 # Warm the wrapper distribution cache (download once, before COPY src).
 RUN ./gradlew --no-daemon --version
 
-# Pre-warm dependency cache before COPY src (PRD §6.16): if JitPack is slow or
+# Pre-warm dependency cache before COPY src: if JitPack is slow or
 # briefly down, the build still has Tessera/Mosaic in the local cache from this
 # step on subsequent builds, and source-only changes don't invalidate the cache.
 # `|| true` so a transient resolution failure doesn't kill the build outright.
@@ -41,7 +41,7 @@ RUN apt-get update \
 # Run as an unprivileged user. The system account `nobody` already exists in
 # the base image; we make sure /app and /data (SQLite volume mount point) are
 # owned by it so the JVM can read app files and write SQLite WAL/db files
-# without elevated privileges (PRD §6.15).
+# without elevated privileges.
 WORKDIR /app
 COPY --from=builder --chown=nobody:nogroup /build/build/install/nlp-kotlin-playground /app/
 RUN mkdir -p /data && chown -R nobody:nogroup /data

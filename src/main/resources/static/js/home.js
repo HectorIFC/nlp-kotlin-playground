@@ -1,6 +1,6 @@
 import { getJson, postEmpty, postFile } from "/js/api.js";
 
-// Mirrors the server-side limit in UploadRoute.kt (PRD §6.2). Enforcing it
+// Mirrors the server-side limit in UploadRoute.kt . Enforcing it
 // client-side saves the round trip and gives a friendlier error.
 const MAX_UPLOAD_BYTES = 2 * 1024 * 1024;
 

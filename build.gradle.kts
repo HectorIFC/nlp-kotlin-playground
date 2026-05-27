@@ -25,7 +25,7 @@ application {
 val ktorVersion = "3.5.0"
 val kotestVersion = "6.1.11"
 
-// PRD §6.13: Exposed has had breaking DSL changes across minor releases.
+// Exposed has had breaking DSL changes across minor releases.
 // Pin to one exact version and bump deliberately (Dependabot groups handle the rest).
 val exposedVersion = "0.55.0"
 val testcontainersVersion = "1.20.4"

@@ -119,7 +119,7 @@ internal class TrainingRepository(
      *
      * When [newStatus] equals the current status the call is a **no-op**: no
      * event is recorded and no row update happens. This makes consumer-side
-     * pipeline replays idempotent (PRD §4.8) — if a worker crashed mid-step
+     * pipeline replays idempotent (if a worker crashed mid-step
      * and the message is redelivered, the new worker can safely re-execute
      * `updateStatus(DOWNLOADING)` even when the row already says DOWNLOADING.
      */
@@ -159,7 +159,7 @@ internal class TrainingRepository(
     }
 
     /**
-     * Sweep READY trainings whose `expires_at` is past. PRD §6.12 — only READY
+     * Sweep READY trainings whose `expires_at` is past. only READY
      * trainings get marked EXPIRED; in-progress states are left alone to avoid
      * racing with the consumer.
      */

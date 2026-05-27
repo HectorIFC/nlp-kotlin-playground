@@ -32,7 +32,7 @@ internal enum class ProcessOutcome {
 /**
  * Orchestrates the full training pipeline for a single message.
  *
- * Idempotency contract (PRD §4.8):
+ * Idempotency contract:
  * - unknown training id → ack, discard.
  * - terminal state (READY/FAILED/EXPIRED) → ack, no-op.
  * - intermediate state (DOWNLOADING/TOKENIZING/...) → reprocess from scratch.
@@ -40,7 +40,7 @@ internal enum class ProcessOutcome {
  *   replay walks through `DOWNLOADING → ... → READY` cleanly without
  *   tripping state-machine validation.
  *
- * Resource cleanup (PRD §4.9 / §6.7):
+ * Resource cleanup :
  * - the downloaded blob is written to a tempfile that is *always* deleted
  *   in `finally`, even on `SIGKILL`-style crashes is best-effort; this
  *   covers the normal path.
@@ -59,7 +59,7 @@ internal class TrainingService(
 
     fun process(message: TrainingMessage): ProcessOutcome {
         // Tag every log line produced under this call with training_id so the
-        // structured-log shipper can correlate across worker threads (PRD §6.14).
+        // structured-log shipper can correlate across worker threads.
         MDC.put(MDC_KEY, message.trainingId)
         try {
             return processInner(message)
@@ -166,7 +166,7 @@ internal class TrainingService(
             Files.readAllBytes(tmp)
         }
         // Mosaic's EmbeddingTable.save() writes the binary AND a sidecar
-        // `<path>.meta.json` (PRD §4.5 / Mosaic EmbeddingFormat.METADATA_EXTENSION).
+        // `<path>.meta.json` (Mosaic EmbeddingFormat.METADATA_EXTENSION).
         // We need to capture both files; the loader on the other side reads the
         // sidecar to verify the SHA-256 checksum before decoding the .bin payload.
         val (mosaicBin, mosaicMeta) = withTempFile("mosaic-", ".bin") { tmp ->

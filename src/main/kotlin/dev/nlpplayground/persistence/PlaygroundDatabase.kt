@@ -14,11 +14,10 @@ import java.sql.DriverManager
 /**
  * SQLite connection holder. One [Database] instance per JVM; Exposed requires
  * `Database.connect` to be called once before any `transaction { ... }` block
- * (PRD §6.4).
  *
  * Two PRAGMA flavours and where each is applied:
  *
- * - `journal_mode=WAL` (PRD §6.3) is a **file-level** SQLite setting — once
+ * - `journal_mode=WAL` is a **file-level** SQLite setting — once
  *   set, it persists in the database header. We apply it once at startup via
  *   a raw JDBC connection (Exposed wraps every statement in BEGIN/COMMIT,
  *   and SQLite refuses `journal_mode=WAL` inside a transaction).

@@ -8,7 +8,7 @@ import org.slf4j.LoggerFactory
 /**
  * Publishes [TrainingMessage]s to RabbitMQ. Each message goes out as
  * `PERSISTENT_TEXT_PLAIN` so a broker restart doesn't lose pending work
- * (PRD §6.9 — durable queue alone isn't enough; the message itself also
+ * (durable queue alone isn't enough; the message itself also
  * needs the persistent flag).
  *
  * The publisher reuses a single [com.rabbitmq.client.Channel] per instance.

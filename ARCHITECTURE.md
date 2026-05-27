@@ -80,7 +80,7 @@ If MinIO is unreachable: 500, no DB row, no message. If publish fails: the DB ro
 
 ### Consumer side (worker thread)
 
-`TrainingService.process(message)` (PRD §4.8):
+`TrainingService.process(message)`:
 
 ```text
 1. SQLite.findById(message.trainingId)
@@ -123,7 +123,7 @@ Tokenize and similarity share the same resolver.
 
 ## 4. State machine
 
-Eight states; the linear forward chain plus a universal shortcut to FAILED, plus a one-way decay from READY to EXPIRED (PRD §4.4 / §6.12).
+Eight states; the linear forward chain plus a universal shortcut to FAILED, plus a one-way decay from READY to EXPIRED.
 
 ```text
 QUEUED ─► DOWNLOADING ─► TOKENIZING ─► EMBEDDING ─► INDEXING ─► READY ─► EXPIRED
@@ -168,11 +168,11 @@ training_events (
 
 Indexes match the hot queries: `trainings(status)` for dashboard filtering, `trainings(created_at DESC)` for newest-first listing, `training_events(training_id, occurred_at)` for timeline reconstruction.
 
-SQLite runs in **WAL mode** (PRD §6.3) so the producer can read while a consumer is writing. The PRAGMA statements run via raw JDBC during `PlaygroundDatabase.init` (Exposed wraps everything in `BEGIN/COMMIT` and SQLite refuses `journal_mode=WAL` inside a transaction). `busy_timeout=5000` absorbs the rare lock contention between the two consumers.
+SQLite runs in **WAL mode** so the producer can read while a consumer is writing. The PRAGMA statements run via raw JDBC during `PlaygroundDatabase.init` (Exposed wraps everything in `BEGIN/COMMIT` and SQLite refuses `journal_mode=WAL` inside a transaction). `busy_timeout=5000` absorbs the rare lock contention between the two consumers.
 
 ---
 
-## 6. Idempotency (PRD §4.8)
+## 6. Idempotency
 
 RabbitMQ can redeliver the same message twice — broker restart, worker crash, network glitch. The consumer handles each case explicitly:
 
@@ -197,7 +197,7 @@ For a future v0.2 we'd consider an outbox + exactly-once-style commit, but the c
 
 Three cleanup paths matter:
 
-- **Tempfile in the consumer.** Always deleted in a `finally` (PRD §6.7). `File.deleteOnExit()` is intentionally avoided because SIGKILL bypasses it; relying on the `try/finally` keeps the cleanup local to the worker invocation. Docker `/tmp` resets on container restart so a hung worker leaks at most one tempfile per training.
+- **Tempfile in the consumer.** Always deleted in a `finally`. `File.deleteOnExit()` is intentionally avoided because SIGKILL bypasses it; relying on the `try/finally` keeps the cleanup local to the worker invocation. Docker `/tmp` resets on container restart so a hung worker leaks at most one tempfile per training.
 - **Source blob in `corpus-uploads`.** Deleted only after the model is durably uploaded. If the consumer crashes before the delete, the MinIO ILM rule (1-day expiry on the bucket) sweeps it.
 - **Trained models in `trained-models`.** Kept until the training row moves to `EXPIRED` (24h after READY). A future cleanup task can call `MinIO.delete(modelBlobPrefix)` on EXPIRED — not implemented in v0.1.0 because the ILM rule handles it.
 
@@ -286,8 +286,8 @@ Set `LOG_FORMAT=plain` to switch to the human-readable pattern (useful when tail
 
 A multi-stage `Dockerfile` builds in `eclipse-temurin:21-jdk-jammy` and ships in `eclipse-temurin:21-jre-jammy`:
 
-- Stage 1 copies the wrapper, build scripts and source, pre-warms the Gradle/JitPack dependency cache (PRD §6.16), then runs `./gradlew installDist`.
-- Stage 2 installs `wget` (for `HEALTHCHECK`), copies the install directory, creates `/data` owned by `nobody:nogroup` for the SQLite volume (PRD §6.15), and switches `USER` before the `ENTRYPOINT`.
+- Stage 1 copies the wrapper, build scripts and source, pre-warms the Gradle/JitPack dependency cache, then runs `./gradlew installDist`.
+- Stage 2 installs `wget` (for `HEALTHCHECK`), copies the install directory, creates `/data` owned by `nobody:nogroup` for the SQLite volume, and switches `USER` before the `ENTRYPOINT`.
 - Healthcheck pings `/health` every 30 seconds after a 20-second grace period — the app needs MinIO and RabbitMQ healthy first.
 
 `docker-compose.yml` wires four services with `depends_on: condition: service_healthy` so the app never starts before its dependencies are ready, plus a one-shot `minio-init` that uses `mc` to create the two buckets and apply ILM rules.

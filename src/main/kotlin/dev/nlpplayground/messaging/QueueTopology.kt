@@ -4,7 +4,7 @@ import com.rabbitmq.client.BuiltinExchangeType
 import com.rabbitmq.client.Channel
 
 /**
- * RabbitMQ topology used by the training pipeline (PRD §4.5).
+ * RabbitMQ topology used by the training pipeline.
  *
  * ```
  *   POST /upload ──> training.exchange (direct, durable)
@@ -40,7 +40,7 @@ internal object QueueTopology {
     const val DLX = "training.dlx"
     const val DLQ = "training.dlq"
 
-    private const val MESSAGE_TTL_MS = 600_000 // 10 minutes — same as PRD §4.5
+    private const val MESSAGE_TTL_MS = 600_000 // 10 minutes
 
     fun declare(channel: Channel) {
         // Exchanges — both durable.

@@ -24,7 +24,7 @@
 
 ## Watch the demo
 
-<video src="https://github.com/HectorIFC/nlp-kotlin-playground/raw/main/docs/demo.mp4" controls width="100%">
+<video src="docs/demo.mp4" controls width="100%">
   Your browser does not support inline video.
   <a href="docs/demo.mp4">Download the walkthrough</a>.
 </video>

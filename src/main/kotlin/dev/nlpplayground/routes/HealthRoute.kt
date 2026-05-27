@@ -7,7 +7,7 @@ import io.ktor.server.routing.Route
 import io.ktor.server.routing.get
 
 /**
- * `/health` now reflects the distributed topology (PRD §3.1 / §4.6): only
+ * `/health` now reflects the distributed topology : only
  * returns 200 when SQLite, MinIO and RabbitMQ are all reachable. The container
  * `depends_on: condition: service_healthy` in `docker-compose.yml` uses this.
  */

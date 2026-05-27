@@ -10,7 +10,7 @@ package dev.nlpplayground.training
  * shortcut to FAILED from any non-terminal step. READY decays to EXPIRED
  * via a background sweeper; FAILED and EXPIRED never move again.
  *
- * See PRD §4.4 for the rationale and PRD §6.12 for the EXPIRED-from-READY-only
+ * See for the rationale and for the EXPIRED-from-READY-only
  * invariant (we never mark in-progress trainings as EXPIRED to avoid racing
  * with the consumer).
  */

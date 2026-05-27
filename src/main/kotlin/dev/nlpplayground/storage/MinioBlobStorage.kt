@@ -18,7 +18,7 @@ import java.io.OutputStream
  * upload/download/delete/bucketExists, which keeps construction cheap and
  * makes tests that don't exercise I/O fast.
  *
- * Buckets are created by the `minio-init` compose service (PRD §4.2); we only
+ * Buckets are created by the `minio-init` compose service; we only
  * verify their presence in [isHealthy].
  */
 internal open class MinioBlobStorage(private val config: Config) : BlobStorage {

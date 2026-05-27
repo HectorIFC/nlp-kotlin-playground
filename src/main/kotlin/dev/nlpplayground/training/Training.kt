@@ -7,7 +7,7 @@ import java.time.Instant
  * return this immutable shape so callers don't have to learn Exposed's DAO
  * surface; we keep ResultRow access localized to the repository.
  *
- * Field mapping mirrors PRD §4.3 — see [dev.nlpplayground.persistence.Trainings]
+ * Field mapping mirrors — see [dev.nlpplayground.persistence.Trainings]
  * for the column definitions.
  */
 internal data class Training(

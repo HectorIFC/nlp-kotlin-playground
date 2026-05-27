@@ -1,7 +1,7 @@
 package dev.nlpplayground.training
 
 /**
- * Lifecycle states of a training pipeline (PRD §4.4).
+ * Lifecycle states of a training pipeline .
  *
  * - `QUEUED`        — message published, not yet picked up by a worker.
  * - `DOWNLOADING`   — worker is pulling the corpus blob from MinIO.

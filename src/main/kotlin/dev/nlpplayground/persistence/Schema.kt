@@ -11,8 +11,7 @@ private const val BLOB_KEY_LENGTH = 255
 
 /**
  * `trainings` — one row per upload. The primary record of state for a
- * training pipeline. Mirrors PRD §4.3 exactly.
- *
+ * training pipeline.
  * Indexes match the dashboard's hot queries:
  *
  * - `status` for "show me all QUEUED/DOWNLOADING" filtering

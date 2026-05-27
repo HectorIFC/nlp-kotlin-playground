@@ -15,7 +15,7 @@ import java.util.concurrent.TimeUnit
  * called — but [stop] is still wired in for the application module's
  * `ApplicationStopped` hook.
  *
- * PRD §6.12: only READY transitions to EXPIRED; the state machine + repository
+ * only READY transitions to EXPIRED; the state machine + repository
  * enforce that, so the scheduler can safely call `markExpired` without
  * extra guards.
  */

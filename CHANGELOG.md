@@ -29,7 +29,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - **RabbitMQ** durable queue topology (`training.exchange` + `training.queue` + DLX + DLQ) with manual acks.
 - **SQLite** persistence via JetBrains Exposed (`trainings` + `training_events` tables, WAL mode, idempotent state-machine updates).
 - Worker pool (`CONSUMER_CONCURRENCY` default `2`) that drains the queue with prefetch=1, executes the full Tessera + Mosaic pipeline, and uploads model artifacts back to MinIO.
-- 8-state training state machine with strict transition validation (PRD §4.4).
+- 8-state training state machine with strict transition validation.
 - `GET /api/training/{id}` — training detail + full event timeline.
 - `GET /api/trainings` — paginated list with `status=`, `since=`, `limit=` filters.
 - `GET /api/trainings/active` — non-terminal trainings only.
@@ -39,12 +39,12 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Structured JSON logging via Logback's `LogstashEncoder`. `training_id` propagated through the SLF4J MDC by both the route layer (Ktor plugin) and the consumer.
 - `LOG_FORMAT=plain` env override for human-readable terminal logs.
 - `ExpirationScheduler` daemon thread that moves READY trainings past their TTL to EXPIRED.
-- Idempotent message processing in the consumer (PRD §4.8): re-deliveries hit a state-machine-aware short-circuit instead of corrupting in-flight work.
+- Idempotent message processing in the consumer: re-deliveries hit a state-machine-aware short-circuit instead of corrupting in-flight work.
 
 ### Changed
 
 - `gradle.properties`: `version=0.1.0`.
-- `Dockerfile`: pre-warms the Gradle dependency cache before `COPY src` (PRD §6.16) and creates `/data` owned by `nobody:nogroup` for the SQLite volume (PRD §6.15). Runtime image still under 350 MB.
+- `Dockerfile`: pre-warms the Gradle dependency cache before `COPY src` and creates `/data` owned by `nobody:nogroup` for the SQLite volume. Runtime image still under 350 MB.
 - `docker-compose.yml`: four services with `depends_on: condition: service_healthy` chain; persistent named volumes for SQLite and MinIO.
 - `Application.kt`: opens MinIO + RabbitMQ + SQLite on startup; ties consumer pool lifecycle to Ktor's `ApplicationStarted` / `ApplicationStopped` events.
 

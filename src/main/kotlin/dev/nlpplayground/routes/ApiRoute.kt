@@ -2,51 +2,41 @@ package dev.nlpplayground.routes
 
 import dev.nlpplayground.AppContext
 import dev.nlpplayground.pipeline.Pipeline
-import dev.nlpplayground.pipeline.PipelineState
 import dev.nlpplayground.pipeline.SemanticSearch
-import dev.nlpplayground.session.SessionEntry
+import dev.nlpplayground.training.TrainingStatus
 import io.ktor.http.HttpStatusCode
 import io.ktor.server.application.ApplicationCall
 import io.ktor.server.plugins.BadRequestException
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.routing.Route
-import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.route
 import kotlinx.serialization.SerializationException
-import java.util.Locale
 
+/**
+ * Search / Tokenize / Compare endpoints, scoped to a training_id.
+ *
+ * The path param flipped from `{sessionId}` (v0.0.x) to `{trainingId}` —
+ * this is part of the breaking change announced in the v0.1.0 README. The
+ * training must be in `READY` state (or `EXPIRED`, which we reject with a
+ * helpful 410 so the dashboard can hint at "re-upload"). All other states
+ * yield 409.
+ *
+ * Pipeline objects are pulled from MinIO once and cached locally by
+ * [dev.nlpplayground.training.TrainingPipelineLoader] — we never re-download
+ * for every request.
+ */
 internal fun Route.apiRoutes(ctx: AppContext) {
     route("/api") {
-        statusEndpoint(ctx)
         searchEndpoint(ctx)
         tokenizeEndpoint(ctx)
         similarityEndpoint(ctx)
     }
 }
 
-private fun Route.statusEndpoint(ctx: AppContext) {
-    get("/status/{sessionId}") {
-        val id = call.requireSessionId() ?: return@get
-        val entry = ctx.sessions.get(id) ?: run {
-            call.respond(HttpStatusCode.NotFound, ErrorResponse("Unknown session"))
-            return@get
-        }
-        call.respond(
-            StatusResponse(
-                sessionId = entry.id,
-                // Locale.ROOT: the API contract is ASCII-only — avoid Turkish-locale 'i' surprises.
-                state = entry.state.name.lowercase(Locale.ROOT),
-                name = entry.pipeline?.name,
-                error = entry.errorMessage,
-            ),
-        )
-    }
-}
-
 private fun Route.searchEndpoint(ctx: AppContext) {
-    post("/search/{sessionId}") {
+    post("/search/{trainingId}") {
         val pipeline = call.requireReadyPipeline(ctx) ?: return@post
         val body = call.receiveJson<SearchRequest>() ?: return@post
         if (body.query.isBlank()) {
@@ -62,7 +52,7 @@ private fun Route.searchEndpoint(ctx: AppContext) {
 }
 
 private fun Route.tokenizeEndpoint(ctx: AppContext) {
-    post("/tokenize/{sessionId}") {
+    post("/tokenize/{trainingId}") {
         val pipeline = call.requireReadyPipeline(ctx) ?: return@post
         val body = call.receiveJson<TokenizeRequest>() ?: return@post
         if (body.text.isBlank()) {
@@ -75,7 +65,7 @@ private fun Route.tokenizeEndpoint(ctx: AppContext) {
 }
 
 private fun Route.similarityEndpoint(ctx: AppContext) {
-    post("/similarity/{sessionId}") {
+    post("/similarity/{trainingId}") {
         val pipeline = call.requireReadyPipeline(ctx) ?: return@post
         val body = call.receiveJson<SimilarityRequest>() ?: return@post
         if (body.textA.isBlank() || body.textB.isBlank()) {
@@ -92,38 +82,39 @@ private fun Route.similarityEndpoint(ctx: AppContext) {
 private suspend inline fun <reified T : Any> ApplicationCall.receiveJson(): T? = try {
     receive()
 } catch (e: BadRequestException) {
-    // Ktor wraps malformed/empty bodies and unsupported content-types in BadRequestException.
     respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid JSON body", e.message))
     null
 } catch (e: SerializationException) {
-    // kotlinx-serialization decoding errors (missing fields, wrong types).
     respond(HttpStatusCode.BadRequest, ErrorResponse("Invalid JSON body", e.message))
     null
 }
 
-private suspend fun ApplicationCall.requireSessionId(): String? {
-    val id = parameters["sessionId"]
-    if (id.isNullOrBlank()) {
-        respond(HttpStatusCode.BadRequest, ErrorResponse("Missing sessionId"))
-        return null
-    }
-    return id
-}
-
+@Suppress("ReturnCount")
 private suspend fun ApplicationCall.requireReadyPipeline(ctx: AppContext): Pipeline? {
-    val id = requireSessionId() ?: return null
-    val entry: SessionEntry = ctx.sessions.get(id) ?: run {
-        respond(HttpStatusCode.NotFound, ErrorResponse("Unknown session"))
+    val id = parameters["trainingId"]
+    if (id.isNullOrBlank()) {
+        respond(HttpStatusCode.BadRequest, ErrorResponse("Missing trainingId"))
         return null
     }
-    return when (entry.state) {
-        PipelineState.READY -> entry.pipeline
-        PipelineState.TRAINING -> {
-            respond(HttpStatusCode.Conflict, ErrorResponse("Session still training", "Poll /api/status to wait."))
+    val training = ctx.trainings.findById(id) ?: run {
+        respond(HttpStatusCode.NotFound, ErrorResponse("Unknown training"))
+        return null
+    }
+    return when (training.status) {
+        TrainingStatus.READY -> ctx.pipelineLoader.resolve(training)
+        TrainingStatus.EXPIRED -> {
+            respond(HttpStatusCode.Gone, ErrorResponse("Training expired", "Upload the corpus again to retrain."))
             null
         }
-        PipelineState.ERROR -> {
-            respond(HttpStatusCode.Conflict, ErrorResponse("Session failed to build", entry.errorMessage))
+        TrainingStatus.FAILED -> {
+            respond(HttpStatusCode.Conflict, ErrorResponse("Training failed", training.errorMessage))
+            null
+        }
+        else -> {
+            respond(
+                HttpStatusCode.Conflict,
+                ErrorResponse("Training still in progress", "Poll /api/training/$id to wait."),
+            )
             null
         }
     }

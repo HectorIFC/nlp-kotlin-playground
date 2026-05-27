@@ -4,6 +4,7 @@ import dev.nlpplayground.AppContext
 import dev.nlpplayground.moduleWith
 import dev.nlpplayground.pipeline.CorpusTrainer
 import dev.nlpplayground.pipeline.Pipeline
+import dev.nlpplayground.testAppContext
 import io.ktor.client.HttpClient
 import io.ktor.client.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.serialization.kotlinx.json.json
@@ -19,7 +20,7 @@ internal fun ApplicationTestBuilder.testClient(): HttpClient = createClient {
     install(ContentNegotiation) { json(testJson) }
 }
 
-internal fun ApplicationTestBuilder.installApp(ctx: AppContext = AppContext()) {
+internal fun ApplicationTestBuilder.installApp(ctx: AppContext = testAppContext()) {
     application { moduleWith(ctx) }
 }
 

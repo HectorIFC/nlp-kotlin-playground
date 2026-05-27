@@ -1,9 +1,12 @@
 package dev.nlpplayground
 
+import dev.nlpplayground.observability.CorrelationId
 import dev.nlpplayground.routes.ErrorResponse
 import dev.nlpplayground.routes.apiRoutes
 import dev.nlpplayground.routes.healthRoute
+import dev.nlpplayground.routes.metricsRoute
 import dev.nlpplayground.routes.pretrainedRoutes
+import dev.nlpplayground.routes.trainingRoutes
 import dev.nlpplayground.routes.uploadRoute
 import dev.nlpplayground.routes.webRoutes
 import io.ktor.http.HttpStatusCode
@@ -35,9 +38,14 @@ internal fun Application.configureRouting(ctx: AppContext) {
     }
 
     routing {
-        healthRoute()
+        // Propagate {trainingId}/{id} path params into the SLF4J MDC so logs
+        // emitted by route handlers are correlated automatically.
+        install(CorrelationId)
+        healthRoute(ctx)
+        metricsRoute(ctx)
         pretrainedRoutes(ctx)
         apiRoutes(ctx)
+        trainingRoutes(ctx)
         uploadRoute(ctx, this@configureRouting)
         webRoutes()
         // Static assets (HTML home, CSS, JS, images) under `resources/static`.

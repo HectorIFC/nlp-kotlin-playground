@@ -1,268 +1,324 @@
-# nlp-kotlin-playground — Architecture
+# nlp-kotlin-playground — Architecture (v0.1.0)
 
-This document explains how the playground is wired together: the request flow, the in-memory session model, how Tessera and Mosaic plug in, and the packaging/distribution decisions. It is aimed at contributors and at readers who want to understand the design before reading code.
+This document explains how the playground is wired together: the four-container topology, the request flow from upload to ready, the state machine that drives every training, the idempotency guarantees, and the rationale behind each component choice. It is aimed at contributors and at readers who want to understand the design before reading code.
+
+For the v0.0.x architecture (synchronous, in-memory, single container), see the git history at tag `v0.0.3`. v0.1.0 is a deliberate breaking redesign.
 
 ---
 
 ## 1. What this project is (and is not)
 
-It is a **Kotlin/JVM web application** — a Ktor server that exposes a small JSON API and serves a static HTML/JS frontend. It is *not* a library: nothing here is published to a Maven coordinate, and there is no public Kotlin surface intended for external consumers.
+It is a **Kotlin/JVM web application** plus its supporting services, packaged as a Docker Compose stack:
 
-Its purpose is to make two sister libraries — [Tessera](https://github.com/HectorIFC/tessera) (BPE tokenizer) and [Mosaic](https://github.com/HectorIFC/mosaic) (lookup-based embeddings) — **tangible** in a browser, end to end, in one Docker container.
+- One Ktor app that serves the HTML frontend, the JSON API, and the consumer workers in the same JVM.
+- One MinIO container for blob storage.
+- One RabbitMQ container for the work queue.
+- One SQLite file persisted in a Docker volume (no separate database container).
 
-The pipeline is real:
+It is **not** a library. Nothing here is published to a Maven coordinate; consumers run the published Docker image, not link against Kotlin classes.
 
-```text
-text → Tessera (tokenize) → token IDs → Mosaic (lookup) → vectors
-                                                              ↓
-                                  mean pool → query vector / sentence vectors
-                                                              ↓
-                                                    cosine similarity → top-K
-```
+The purpose is to make two sister libraries — [Tessera](https://github.com/HectorIFC/tessera) (BPE tokenizer) and [Mosaic](https://github.com/HectorIFC/mosaic) (lookup-based embeddings) — **tangible** through a realistic distributed-systems story: queue-driven processing, durable state, observability, graceful shutdown. The pipeline itself (tokenize → embed → mean-pool → cosine) is the same as v0.0.x; only the orchestration changed.
 
 The embeddings are **randomly initialized** (Mosaic is a lookup table, not a trained model). The disclaimer surfaces in every page of the UI and in the README. Training is a separate future project.
 
 ---
 
-## 2. High-level diagram
+## 2. High-level topology
 
 ```mermaid
 flowchart LR
-    Browser["Browser (vanilla JS)"]
-    Static["staticResources<br/>(/css, /js, /favicon.svg, index.html)"]
-    Web["webRoutes<br/>GET /explore/{id}"]
-    Health["/health"]
-    Pretrained["pretrainedRoutes<br/>GET /pretrained<br/>POST /pretrained/{name}"]
-    Upload["uploadRoute<br/>POST /upload"]
-    Api["apiRoutes<br/>/api/status, /search,<br/>/tokenize, /similarity"]
+    subgraph Browser
+        UI["Vanilla JS\nProgress + Dashboard"]
+    end
 
-    PipelineSvc["PipelineService"]
-    Loader["PretrainedLoader"]
-    Trainer["CorpusTrainer"]
-    Search["SemanticSearch"]
-    Sessions["SessionStore<br/>(ConcurrentHashMap)"]
-    Scheduler["SessionEvictionScheduler"]
-    Tessera[("Tessera<br/>JitPack dep")]
-    Mosaic[("Mosaic<br/>JitPack dep")]
+    subgraph App["Ktor app (single JVM)"]
+        Routes["Routes\n/upload /api/* /metrics"]
+        Producer["TrainingPublisher"]
+        Consumer["Consumer pool\nN workers"]
+        Service["TrainingService\n(pipeline orchestrator)"]
+        Loader["TrainingPipelineLoader\nLRU cache"]
+    end
 
-    Browser <-->|HTTP + JSON| Web
-    Browser <-->|HTTP + JSON| Pretrained
-    Browser <-->|HTTP + JSON| Upload
-    Browser <-->|HTTP + JSON| Api
-    Browser <--> Static
-    Browser --> Health
+    SQLite[("SQLite\nWAL mode\nExposed ORM")]
+    MinIO[("MinIO\ncorpus-uploads\ntrained-models")]
+    Rabbit["RabbitMQ\ntraining.exchange\ntraining.queue + DLQ"]
 
-    Pretrained --> PipelineSvc
-    Upload --> PipelineSvc
-    Api --> Sessions
-    Api --> Search
-
-    PipelineSvc --> Loader
-    PipelineSvc --> Trainer
-    Loader --> Tessera
-    Loader --> Mosaic
-    Trainer --> Tessera
-    Trainer --> Mosaic
-    Search --> Mosaic
-
-    Sessions <--> Scheduler
+    UI -- HTTP/JSON --> Routes
+    Routes -- create QUEUED --> SQLite
+    Routes -- upload corpus --> MinIO
+    Routes --> Producer
+    Producer -- publish --> Rabbit
+    Rabbit -- consume --> Consumer
+    Consumer --> Service
+    Service -- download --> MinIO
+    Service -- transitions --> SQLite
+    Service -- upload model --> MinIO
+    Routes -- search/tokenize --> Loader
+    Loader -- bundled --> classpath["resources/pretrained/"]
+    Loader -- uploaded --> MinIO
 ```
+
+Everything inside the dotted region (the Ktor app) is a single JVM process — the consumer pool runs in the same address space as the HTTP routes. Externally there are only three other containers (`minio`, `rabbitmq`, and the one-shot `minio-init` that creates buckets).
 
 ---
 
-## 3. Request flow: search
+## 3. Request flow: upload → ready → search
 
-`POST /api/search/{sessionId}` is the canonical end-to-end path.
+### Producer side (HTTP thread)
 
 ```text
-1. Ktor routes the request to apiRoutes → searchEndpoint(ctx).
-2. requireReadyPipeline(ctx) resolves {sessionId} against SessionStore.
-   - missing      → 404 ErrorResponse("Unknown session")
-   - TRAINING     → 409 "Session still training"
-   - ERROR        → 409 "Session failed to build"
-   - READY        → returns the Pipeline (tokenizer + embeddings + sentences)
-3. The request body { query, topK } is decoded as SearchRequest;
-   blank query or topK ≤ 0 → 400.
-4. SemanticSearch.search(pipeline, query, topK) runs:
-   a. dev.mosaic.TesseraEmbeddings(pipeline.tokenizer, pipeline.embeddings)
-   b. queryVector = encodeMeanPooled(query)
-   c. for each sentence in pipeline.sentences:
-        sentenceVector = encodeMeanPooled(sentence)
-        score          = VectorOps.cosineSimilarity(queryVector, sentenceVector)
-   d. sort by score desc, take topK
-5. Response: { query, results: [{ sentence, score }, …] }
+POST /upload (multipart file)
+  ├─ validate: size ≤ 2 MB, UTF-8 strict, non-blank
+  ├─ generate trainingId = UUID
+  ├─ MinIO.upload(corpus-uploads, "{trainingId}.txt", bytes)
+  ├─ TrainingRepository.create(QUEUED, blob_key, size, filename)
+  ├─ TrainingPublisher.publish({trainingId, blob_key, submitted_at})
+  └─ respond 202 { trainingId, status, statusUrl, progressUrl }
 ```
 
-All non-trivial work happens inside the Tessera/Mosaic JARs; this project orchestrates and exposes.
+If MinIO is unreachable: 500, no DB row, no message. If publish fails: the DB row is moved to FAILED, response is 500. The two operations are deliberately *not* an atomic outbox — for the playground scale, best-effort plus the 1-day MinIO TTL is cheaper than introducing a transactional outbox.
 
----
+### Consumer side (worker thread)
 
-## 4. The session model
-
-Each upload or pre-trained-corpus selection creates a **session**: an opaque UUID that maps to a `Pipeline` snapshot in memory.
-
-| Concern | Implementation |
-|---|---|
-| Storage | `ConcurrentHashMap<String, SessionEntry>` in [`SessionStore`](./src/main/kotlin/dev/nlpplayground/session/SessionStore.kt) |
-| States  | `TRAINING` (upload running), `READY` (Pipeline usable), `ERROR` (training failed) |
-| Time-based eviction | Entries older than `maxAge` (default 1 h) are removed by `evictOld()` |
-| Capacity eviction   | When `maxSessions` (default 50) is exceeded, the oldest entry is dropped |
-| Background sweep    | `SessionEvictionScheduler` runs `evictOld()` every 10 minutes on a daemon thread |
-
-Sessions are **never persisted**. Restarting the JVM (or the container) discards everything. This is intentional: the playground is a single-instance demo, not a tenant-aware service. The `Clock` is injected so eviction is deterministic under test.
-
-`Pipeline` is the unit of state:
-
-```kotlin
-internal data class Pipeline(
-    val name: String,
-    val tokenizer: BpeTokenizer,     // from dev.tessera
-    val embeddings: EmbeddingTable,  // from dev.mosaic
-    val sentences: List<String>,
-)
-```
-
----
-
-## 5. How Tessera and Mosaic plug in
-
-Both libraries are JitPack dependencies, declared in [`build.gradle.kts`](./build.gradle.kts):
-
-```kotlin
-implementation("com.github.HectorIFC:tessera:v0.0.7")
-implementation("com.github.HectorIFC:mosaic:v0.0.4")
-```
-
-Nothing from them is re-implemented. The integration class `dev.mosaic.TesseraEmbeddings` already exists in Mosaic; the playground uses it directly for mean-pooled encoding.
-
-### Pre-trained corpora
-
-Three corpora ship in `src/main/resources/pretrained/<name>/`:
+`TrainingService.process(message)` (PRD §4.8):
 
 ```text
-alice-in-wonderland/
-├── corpus.txt              # 151 KB — Project Gutenberg #11, license stripped
-├── tessera.json            # 175 KB — trained tokenizer (2000 BPE merges)
-├── mosaic.bin              # 1.16 MB — 2257-vocab × 128-dim random embeddings (seed 42)
-└── mosaic.bin.meta.json    # 293 B — Mosaic's metadata sidecar
-shakespeare-sonnets/        # same layout, Project Gutenberg #1041
-kotlin-stdlib-docs/         # same layout, KDoc blocks extracted from 7 stdlib files
+1. SQLite.findById(message.trainingId)
+   - missing      → SKIPPED (ack, discard)
+   - terminal     → SKIPPED (already READY/FAILED/EXPIRED, idempotent re-delivery)
+   - intermediate → reprocess from scratch
+   - QUEUED       → proceed
+2. SQLite.updateStatus(DOWNLOADING)
+3. MinIO.download(corpus-uploads/{key}) → tempfile (cleaned up in finally)
+4. SQLite.updateStatus(TOKENIZING)
+5. Trainer.train(corpus)  ← Tessera + Mosaic, same code as v0.0.x
+6. SQLite.updateStatus(EMBEDDING)
+7. SQLite.updateStatus(INDEXING)
+8. MinIO.upload(trained-models/{id}/tessera.json | mosaic.bin | mosaic.bin.meta.json | corpus.txt)
+9. SQLite.updateStatus(READY, expiresAt=now+24h)
+10. MinIO.delete(corpus-uploads/{key})
+11. consumer.basicAck()
 ```
 
-These are produced by a dedicated **pretrainer source set** (`src/pretrainer/kotlin/`), run via `./gradlew runPretrain`. The task lives outside the production JAR — it is dev tooling, not runtime code. Outputs are deterministic given the inputs (same seed, same merges, same cleaning) and are committed to the repo so the JAR is self-contained.
+Any uncaught exception on the worker → `markFailed()` + `basicNack(requeue=false)` → DLX → DLQ. The tempfile in step 3 is always deleted in a `finally` block; SIGKILL-style crashes will leak (Docker volumes inside containers don't persist `/tmp` across restarts anyway, so this is bounded).
 
-`PretrainedLoader` reads them at startup by copying the three classpath resources to a temp directory (because both `BpeTokenizer.load` and `EmbeddingTable.load` take a `File`/`String` path, not an `InputStream`), then parses with the library APIs and deletes the temp files.
+### Search request flow
 
-### Uploaded corpora
+```text
+POST /api/search/{trainingId}
+  ├─ SQLite.findById(trainingId)
+  ├─ training.status == READY ?
+  │    → TrainingPipelineLoader.resolve(training)
+  │      - if corpus_blob_key starts with "bundled:" → PretrainedLoader (classpath)
+  │      - else → download tessera.json + mosaic.bin + meta + corpus.txt from MinIO
+  │              and cache (LRU, 16 entries)
+  ├─ training.status == EXPIRED → 410 Gone
+  ├─ training.status == FAILED → 409 Conflict with errorMessage
+  └─ otherwise (in-progress) → 409 Conflict "still training"
+```
 
-`UploadRoute` accepts `multipart/form-data` with a single `file` part:
-
-1. Reads up to **2 MB + 1 byte** anything more → `413 Payload Too Large`.
-2. Strips a UTF-8 BOM if present, then **strict-decodes** as UTF-8 (`CodingErrorAction.REPORT`). Any malformed byte → `400 "File must be UTF-8 encoded"`.
-3. Generates an internal name `upload-<8hex>` (the upload's own filename is never used).
-4. Creates a `TRAINING` session, returns `202 Accepted` immediately.
-5. Launches a background coroutine on `Dispatchers.Default` that runs `CorpusTrainer.train(...)`:
-   - `Trainer(TrainingConfig(numMerges = 2000)).train(corpus)`
-   - `EmbeddingTable.create(vocabSize, embeddingDim = 128, initializer = Initializer.uniformDefault(seed = 42))`
-   - splits the corpus into sentences with `Regex("[.!?\\n]+")` filtered to length > 10
-6. On completion: `SessionStore.markReady(id, pipeline)` or `markError(id, msg)`.
-
-The frontend polls `GET /api/status/{sessionId}` every 1 s until the state is no longer `training`.
+Tokenize and similarity share the same resolver.
 
 ---
 
-## 6. HTTP module layout
+## 4. State machine
+
+Eight states; the linear forward chain plus a universal shortcut to FAILED, plus a one-way decay from READY to EXPIRED (PRD §4.4 / §6.12).
+
+```text
+QUEUED ─► DOWNLOADING ─► TOKENIZING ─► EMBEDDING ─► INDEXING ─► READY ─► EXPIRED
+   │           │            │            │           │           (TTL)
+   │           │            │            │           │
+   └───────────┴────────────┴────────────┴───────────┴─► FAILED
+```
+
+Transitions are validated by `TrainingStateMachine.assertValidTransition` on every `updateStatus` call. **Same-state transitions are idempotent no-ops** so the consumer can safely replay an interrupted run from any intermediate state without violating the machine.
+
+`FAILED` and `EXPIRED` are terminal — never move again. `EXPIRED` only ever comes from `READY` (the scheduler filters on status before calling `updateStatus`, so a long-running training never gets EXPIRED out from under the worker).
+
+---
+
+## 5. Persistence
+
+Two tables — see `persistence/Schema.kt` for the Exposed DSL definition.
+
+```sql
+trainings (
+    id TEXT PRIMARY KEY,
+    status TEXT NOT NULL,
+    corpus_blob_key TEXT,       -- "<uuid>.txt" for uploads, "bundled:<name>" for pretrained
+    corpus_size_bytes INTEGER,
+    corpus_filename TEXT,
+    model_blob_prefix TEXT,     -- "<uuid>/" once READY
+    error_message TEXT,
+    created_at INTEGER NOT NULL,
+    updated_at INTEGER NOT NULL,
+    expires_at INTEGER          -- epoch millis, NULL until READY
+);
+
+training_events (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    training_id TEXT NOT NULL REFERENCES trainings(id),
+    from_status TEXT,           -- NULL for the initial QUEUED insertion
+    to_status TEXT NOT NULL,
+    detail TEXT,                -- free-text context (filename, error message)
+    occurred_at INTEGER NOT NULL
+);
+```
+
+Indexes match the hot queries: `trainings(status)` for dashboard filtering, `trainings(created_at DESC)` for newest-first listing, `training_events(training_id, occurred_at)` for timeline reconstruction.
+
+SQLite runs in **WAL mode** (PRD §6.3) so the producer can read while a consumer is writing. The PRAGMA statements run via raw JDBC during `PlaygroundDatabase.init` (Exposed wraps everything in `BEGIN/COMMIT` and SQLite refuses `journal_mode=WAL` inside a transaction). `busy_timeout=5000` absorbs the rare lock contention between the two consumers.
+
+---
+
+## 6. Idempotency (PRD §4.8)
+
+RabbitMQ can redeliver the same message twice — broker restart, worker crash, network glitch. The consumer handles each case explicitly:
+
+| State on receipt | Action | Reason |
+|---|---|---|
+| Unknown id | ack, discard | Message references a training that was never created (or was already evicted). |
+| `READY`/`FAILED`/`EXPIRED` | ack, no-op | Already terminal; no work to do. |
+| `QUEUED` | run the pipeline | First-time delivery, the common case. |
+| Any intermediate state | warn, replay from current state | Previous worker crashed mid-pipeline. The repository's same-state `updateStatus` no-ops keep this safe. |
+
+The replay path matters because the pipeline does **side-effects** (MinIO uploads, blob deletions). The current implementation tolerates "re-do" because:
+
+- Uploads use the same key — overwriting an existing object is benign.
+- The source blob delete is `runCatching {}` — already-deleted is fine.
+- The READY transition is the last write; if the worker crashed before it, the prior worker hadn't yet deleted the source blob, so the re-do downloads it again and proceeds.
+
+For a future v0.2 we'd consider an outbox + exactly-once-style commit, but the current behaviour is exactly the right complexity for the demo.
+
+---
+
+## 7. Cleanup of resources
+
+Three cleanup paths matter:
+
+- **Tempfile in the consumer.** Always deleted in a `finally` (PRD §6.7). `File.deleteOnExit()` is intentionally avoided because SIGKILL bypasses it; relying on the `try/finally` keeps the cleanup local to the worker invocation. Docker `/tmp` resets on container restart so a hung worker leaks at most one tempfile per training.
+- **Source blob in `corpus-uploads`.** Deleted only after the model is durably uploaded. If the consumer crashes before the delete, the MinIO ILM rule (1-day expiry on the bucket) sweeps it.
+- **Trained models in `trained-models`.** Kept until the training row moves to `EXPIRED` (24h after READY). A future cleanup task can call `MinIO.delete(modelBlobPrefix)` on EXPIRED — not implemented in v0.1.0 because the ILM rule handles it.
+
+---
+
+## 8. Module layout
 
 ```text
 src/main/kotlin/dev/nlpplayground/
-├── Application.kt                # EngineMain + module() + moduleWith(ctx)
-├── AppContext.kt                 # PipelineService + SessionStore + Scheduler
-├── Routing.kt                    # installs StatusPages + mounts all routes + staticResources
-├── pipeline/
-│   ├── Pipeline.kt
-│   ├── PipelineService.kt        # facade: loadPretrained / trainFromCorpus
-│   ├── PretrainedLoader.kt       # classpath → temp file → BpeTokenizer/EmbeddingTable
-│   ├── CorpusTrainer.kt          # Trainer + EmbeddingTable.create + sentence split
-│   └── SemanticSearch.kt         # search / similarity / tokenize using TesseraEmbeddings
-├── session/
-│   ├── SessionStore.kt           # ConcurrentHashMap, eviction, capacity cap
-│   └── SessionEvictionScheduler.kt
-└── routes/
-    ├── Dtos.kt                   # @Serializable request/response DTOs
-    ├── HealthRoute.kt            # GET /health
-    ├── PretrainedRoute.kt        # GET /pretrained, POST /pretrained/{name}
-    ├── UploadRoute.kt            # POST /upload (multipart, 2 MB, UTF-8 strict)
-    ├── ApiRoute.kt               # /api/status, /api/search, /api/tokenize, /api/similarity
-    └── WebRoute.kt               # GET /explore/{sessionId} (dynamic; static handles the rest)
+├── Application.kt                # EngineMain entrypoint + module() lifecycle
+├── AppContext.kt                 # Wires every collaborator; opens connections
+├── Config.kt                     # Env vars → typed config
+├── Routing.kt                    # StatusPages + CorrelationId + mounts every route
+│
+├── routes/
+│   ├── HealthRoute.kt            # validates SQLite + MinIO + RabbitMQ
+│   ├── UploadRoute.kt            # 202 Accepted async upload
+│   ├── TrainingRoute.kt          # /api/training/{id}, /api/trainings, /active
+│   ├── ApiRoute.kt               # /api/search, tokenize, similarity
+│   ├── PretrainedRoute.kt        # bundled corpora as READY rows
+│   ├── MetricsRoute.kt           # Prometheus-text /metrics
+│   ├── WebRoute.kt               # dynamic-path HTML (/explore, /training/{id}/progress, /trainings)
+│   └── Dtos.kt                   # @Serializable request/response DTOs
+│
+├── persistence/
+│   ├── PlaygroundDatabase.kt     # SQLite connect + WAL + SchemaUtils.create
+│   ├── Schema.kt                 # Exposed Tables (Trainings, TrainingEvents)
+│   ├── TrainingRepository.kt     # CRUD + idempotent updateStatus + markExpired
+│   └── TrainingEventRepository.kt # append-only audit log
+│
+├── storage/
+│   ├── BlobStorage.kt            # interface (upload/download/delete/openStream)
+│   └── MinioBlobStorage.kt       # production impl
+│
+├── messaging/
+│   ├── RabbitConnection.kt       # single lazy Connection per JVM
+│   ├── QueueTopology.kt          # exchange + queue + DLX + DLQ declarations
+│   ├── TrainingMessage.kt        # @Serializable payload
+│   ├── TrainingPublisher.kt      # PERSISTENT_TEXT_PLAIN publishes
+│   └── TrainingConsumer.kt       # worker pool, manual ack/nack
+│
+├── training/
+│   ├── TrainingStatus.kt         # enum (8 states)
+│   ├── TrainingStateMachine.kt   # allowed transitions + assertion
+│   ├── Training.kt               # domain record + event record
+│   ├── TrainingService.kt        # pipeline orchestrator (idempotent)
+│   ├── TrainingPipelineLoader.kt # LRU cache; resolves bundled vs MinIO
+│   ├── ExpirationScheduler.kt    # daemon: READY → EXPIRED past TTL
+│   └── pipeline/                 # unchanged from v0.0.x
+│       ├── Pipeline.kt
+│       ├── PretrainedLoader.kt
+│       ├── CorpusTrainer.kt
+│       └── SemanticSearch.kt
+│
+└── observability/
+    ├── CorrelationId.kt          # Ktor plugin: training_id path param → MDC
+    └── MetricsRegistry.kt        # 4 AtomicLong counters
 ```
-
-`StatusPages` maps `IllegalArgumentException` → `400` and any uncaught `Throwable` → `500`. The route handlers handle their own happy/edge paths explicitly (404, 409, 413, 400) so most responses never hit `StatusPages`.
 
 ---
 
-## 7. Frontend
+## 9. Frontend
 
-The frontend is intentionally framework-free: vanilla ES modules served from `src/main/resources/static/`.
+Three pages, all served as static HTML + ES modules:
 
-```text
-static/
-├── index.html       # home: pre-trained list + upload form + disclaimer
-├── explore.html     # tabs (Search / Tokenize / Compare) — sessionId read from URL
-├── favicon.svg      # brand mark: indigo "Tessera" + descending orange "Mosaic" cells
-├── css/main.css     # dual-accent palette: indigo for Tessera, orange for Mosaic
-└── js/
-    ├── api.js       # thin fetch wrapper (JSON + multipart)
-    ├── home.js      # pretrained list, upload + polling redirect
-    ├── explore.js   # tab switcher + session header
-    ├── search.js
-    ├── tokenize.js
-    └── compare.js
-```
+- **`/`** — corpus picker + upload form. On submit, redirects to `/training/{id}/progress`.
+- **`/training/{id}/progress`** — six-step timeline polling `/api/training/{id}` every 2 seconds. Auto-redirects to `/explore/{id}` on `ready`.
+- **`/trainings`** — full dashboard with multi-select status filters, "last hour / 24h / all" radio, expandable detail rows showing the event timeline, auto-refresh every 3 seconds. Highlights non-terminal trainings stuck for >5 minutes.
+- **`/explore/{id}`** — the original Search / Tokenize / Compare tabs from v0.0.x.
 
-Each tab is its own module wired in `explore.js`; there is **no global state** . Tabs animate in via a single `@keyframes fade-in-up` rule; results stagger by row index.
+No framework. The full JS surface is six modules (`api.js`, `home.js`, `progress.js`, `trainings.js`, `explore.js`, `search.js`, `tokenize.js`, `compare.js`) totaling ~700 lines. The intent is that anyone can read the entire frontend in one sitting.
 
 ---
 
-## 8. Distribution
+## 10. Observability
+
+- **Structured logging** — Logback's `LogstashEncoder` emits one JSON document per line, including the MDC. Filter the stream with `jq` for ad-hoc analysis.
+- **Correlation IDs** — both the route layer (via the `CorrelationId` Ktor plugin) and the consumer (`TrainingService.process`) put the `training_id` in the SLF4J MDC. The encoder lifts it to a top-level JSON field so log aggregators can pivot on it without parsing.
+- **Metrics** — four counters surface at `GET /metrics` in Prometheus text format. Zero external dependencies (no Micrometer/Prometheus client). For a real production deployment this would graduate to Micrometer + an exporter; for the playground it's intentionally minimal.
+
+Set `LOG_FORMAT=plain` to switch to the human-readable pattern (useful when tailing logs in a terminal). JSON stays the default in compose.
+
+---
+
+## 11. Distribution
 
 A multi-stage `Dockerfile` builds in `eclipse-temurin:21-jdk-jammy` and ships in `eclipse-temurin:21-jre-jammy`:
 
-- Stage 1 copies the wrapper, sources, and config, runs `./gradlew installDist`.
-- Stage 2 installs `wget` (needed by `HEALTHCHECK`), copies the install directory, and sets the `ENTRYPOINT`.
-- The healthcheck pings `/health` every 30 s after a 15 s grace period.
+- Stage 1 copies the wrapper, build scripts and source, pre-warms the Gradle/JitPack dependency cache (PRD §6.16), then runs `./gradlew installDist`.
+- Stage 2 installs `wget` (for `HEALTHCHECK`), copies the install directory, creates `/data` owned by `nobody:nogroup` for the SQLite volume (PRD §6.15), and switches `USER` before the `ENTRYPOINT`.
+- Healthcheck pings `/health` every 30 seconds after a 20-second grace period — the app needs MinIO and RabbitMQ healthy first.
 
-The release workflow (`.github/workflows/release.yml`) is adapted from Tessera's pattern:
+`docker-compose.yml` wires four services with `depends_on: condition: service_healthy` so the app never starts before its dependencies are ready, plus a one-shot `minio-init` that uses `mc` to create the two buckets and apply ILM rules.
 
-1. `mathieudutour/github-tag-action` (dry-run) computes the next SemVer from conventional commits.
-2. `sed` bumps `gradle.properties`, the `org.opencontainers.image.version` label, and the README.
-3. `./gradlew build` verifies the bump compiles + tests.
-4. `docker/login-action` + `docker/build-push-action` push `ghcr.io/hectorifc/nlp-kotlin-playground:vX.Y.Z` and `:latest` with cache-from/to GHA.
-5. The version commit is pushed to `main` with `[skip ci]`, the tag is created, and a GitHub Release is opened.
-
-`Dependabot` keeps Gradle deps, GitHub Actions, and the Docker base image current weekly.
+The release workflow publishes `ghcr.io/hectorifc/nlp-kotlin-playground:vX.Y.Z` and `:latest` on every merge to `main` that produces a SemVer bump (computed from conventional commit messages via `mathieudutour/github-tag-action`).
 
 ---
 
-## 9. Design decisions
+## 12. Design decisions
 
 | Decision | Rationale |
 |---|---|
-| **Ktor 3.x** over Spring/Micronaut | Idiomatic Kotlin, near-zero boot time, small image. Pure stdlib + Netty. |
-| **Single-module Gradle** | Unlike Tessera/Mosaic, the playground is one deliverable — no library, no CLI. A second source set (`pretrainer`) exists only for dev tooling. |
-| **In-memory sessions** | A real cache (Redis, Postgres) would dwarf the rest of the app. Eviction + cap is enough for a single-instance demo. |
-| **Pre-trained corpora committed** | Regenerating on every build is slow and non-deterministic across environments. Committing the artifacts makes the JAR self-contained. |
-| **Vanilla JS** | A 3-tab UI doesn't justify a SPA framework. The whole frontend is ~500 lines including CSS; reading it requires no toolchain. |
-| **GHCR over Docker Hub** | Free private images, single auth surface, no rate limits for `docker pull` from public repos. |
-| **JitPack over Maven Central** for Tessera/Mosaic | Both sister projects are already on JitPack; no extra publication step is needed. The playground consumes whatever tag exists. |
-| **YAML config (`application.yaml`)** | Ktor 3 moved HOCON to a separate artifact; YAML is now the lighter-touch default. |
-| **No CORS** | Frontend and backend share an origin. CORS would be dead code. |
+| **Ktor 3.x** over Spring/Micronaut | Idiomatic Kotlin, near-zero boot time. Same as v0.0.x. |
+| **Single-module Gradle** | Even with the v0.1.0 expansion, the playground is one deliverable. The `pretrainer` source set is dev tooling, not a library boundary. |
+| **MinIO over filesystem** | S3-compatible API exercises real production code paths; ILM rules give automatic TTL cleanup without a cron job. |
+| **RabbitMQ with manual acks + DLQ** | Auto-ack would lose work on crash. Manual ack guarantees at-least-once delivery (paired with idempotency on the consumer side). The DLQ exists to surface bad uploads without auto-retry loops. |
+| **SQLite via Exposed ORM** | Single-file DB keeps the demo runnable from any laptop. WAL mode handles the concurrent reads + serial writes pattern the playground produces. Exposed DSL is more idiomatic than raw JDBC and lighter than Hibernate. |
+| **Polling over SSE** | Polling at 2-3 s fits the existing JSON API and avoids the SSE-through-Ktor footguns. SSE is a stretch goal for v0.2 when there are more event types worth pushing. |
+| **JitPack over Maven Central** for Tessera/Mosaic | Both sister projects already publish on JitPack; no extra release pipeline. |
+| **GHCR over Docker Hub** | Free private images, single auth surface, rate-limit-free public pulls. |
+| **YAML config (`application.yaml`)** | Ktor 3 moved HOCON out of core. YAML is the lighter-touch default. |
+| **No CORS** | Frontend and backend share an origin. CORS rules would be dead code. |
 
 ---
 
-## 10. References
+## 13. References
 
 - Tessera — [github.com/HectorIFC/tessera](https://github.com/HectorIFC/tessera) · [ARCHITECTURE.md](https://github.com/HectorIFC/tessera/blob/main/ARCHITECTURE.md)
 - Mosaic — [github.com/HectorIFC/mosaic](https://github.com/HectorIFC/mosaic) · [ARCHITECTURE.md](https://github.com/HectorIFC/mosaic/blob/main/ARCHITECTURE.md)
 - Ktor docs — <https://ktor.io/docs/>
-- GHCR — <https://docs.github.com/en/packages/working-with-a-github-packages-registry/working-with-the-container-registry>
-- Conventional Commits — <https://www.conventionalcommits.org/>
+- Exposed wiki — <https://github.com/JetBrains/Exposed/wiki>
+- RabbitMQ DLX guide — <https://www.rabbitmq.com/dlx.html>
+- SQLite WAL mode — <https://www.sqlite.org/wal.html>
+- MinIO Java SDK — <https://min.io/docs/minio/linux/developers/java/minio-java.html>

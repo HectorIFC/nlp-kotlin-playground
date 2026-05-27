@@ -16,6 +16,10 @@ complexity:
   LongParameterList:
     active: true
     functionThreshold: 8
+    # AppContext is a wiring class — relaxing the constructor threshold lets
+    # it list every collaborator explicitly rather than hiding deps behind a
+    # builder / DI framework just to dodge a lint rule.
+    constructorThreshold: 10
   TooManyFunctions:
     active: true
     thresholdInFiles: 20

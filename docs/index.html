@@ -1,0 +1,1058 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="description" content="nlp-kotlin-playground — an interactive NLP pipeline playground in pure Kotlin. Byte-level BPE, lookup embeddings and semantic search behind a queue-based distributed backbone: RabbitMQ, MinIO, SQLite." />
+  <title>nlp-kotlin-playground — An NLP pipeline on real distributed rails</title>
+
+  <!-- Favicons -->
+  <link rel="icon" type="image/svg+xml" href="logo/logo.svg" />
+  <link rel="icon" type="image/png" sizes="32x32" href="logo/favicon-32.png" />
+  <link rel="icon" type="image/png" sizes="16x16" href="logo/favicon-16.png" />
+  <link rel="apple-touch-icon" sizes="180x180" href="logo/favicon-180.png" />
+  <link rel="icon" type="image/png" sizes="192x192" href="logo/favicon-192.png" />
+  <link rel="icon" type="image/png" sizes="512x512" href="logo/favicon-512.png" />
+  <link rel="manifest" href="site.webmanifest" />
+  <meta name="theme-color" content="#6366f1" />
+
+  <!-- Open Graph -->
+  <meta property="og:type"        content="website" />
+  <meta property="og:url"         content="https://hectorifc.github.io/nlp-kotlin-playground/" />
+  <meta property="og:title"       content="nlp-kotlin-playground — An NLP pipeline on real distributed rails" />
+  <meta property="og:description" content="Corpus in, semantic search out — byte-level BPE (Tessera) + lookup embeddings (Mosaic) behind RabbitMQ, MinIO and SQLite. Pure Kotlin, one docker compose up." />
+  <meta property="og:image"       content="https://hectorifc.github.io/nlp-kotlin-playground/logo/logo-512.png" />
+  <meta name="twitter:card"       content="summary_large_image" />
+
+  <!-- Fonts are served from Google's CDN, so visitor IPs reach Google (GDPR
+       consideration). To self-host instead, download Sora + JetBrains Mono
+       (e.g. via google-webfonts-helper) into docs/fonts/ and replace these
+       three tags with local @font-face rules. -->
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500;600&display=swap" rel="stylesheet" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:        #07070d;
+      --bg2:       #0d0e18;
+      --surface:   rgba(255,255,255,0.04);
+      --border:    rgba(255,255,255,0.08);
+      --primary:   #818cf8;
+      --primary2:  #6366f1;
+      --accent:    #fb923c;
+      --accent2:   #ea580c;
+      --ok:        #34d399;
+      --text:      #e6e9f2;
+      --muted:     #5b6478;
+      --muted2:    #98a1b8;
+      --code-bg:   #0a0b14;
+      --radius:    12px;
+      --radius-lg: 20px;
+      --mono:      'JetBrains Mono', ui-monospace, monospace;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Sora', system-ui, sans-serif;
+      line-height: 1.6;
+      overflow-x: hidden;
+    }
+
+    /* ── NOISE TEXTURE OVERLAY ── */
+    body::before {
+      content: '';
+      position: fixed; inset: 0;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)' opacity='0.03'/%3E%3C/svg%3E");
+      pointer-events: none; z-index: 0;
+    }
+
+    /* ── GLOW BLOBS ── */
+    .blob {
+      position: fixed; border-radius: 50%;
+      filter: blur(120px); opacity: 0.11; pointer-events: none; z-index: 0;
+    }
+    .blob-1 { width: 620px; height: 620px; background: #6366f1; top: -220px; left: -120px; }
+    .blob-2 { width: 520px; height: 520px; background: #ea580c; top: 38%; right: -180px; }
+    .blob-3 { width: 420px; height: 420px; background: #818cf8; bottom: 8%; left: 28%; }
+
+    /* ── LAYOUT ── */
+    .container { max-width: 1140px; margin: 0 auto; padding: 0 24px; position: relative; z-index: 1; }
+    .narrow { max-width: 880px; margin: 0 auto; }
+
+    /* ── NAV ── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(7,7,13,0.82);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--border);
+    }
+    .nav-inner { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+    .nav-logo { display: flex; align-items: center; gap: 10px; text-decoration: none; color: var(--text); }
+    .nav-logo-img { width: 32px; height: 32px; border-radius: 8px; display: block; flex-shrink: 0; }
+    .nav-logo-text { font-family: var(--mono); font-weight: 600; font-size: 15px; letter-spacing: -0.4px; }
+    .nav-links { display: flex; align-items: center; gap: 6px; }
+    .nav-link {
+      color: var(--muted2); text-decoration: none; font-size: 14px;
+      padding: 6px 12px; border-radius: 8px; transition: all .2s;
+    }
+    .nav-link:hover { color: var(--text); background: var(--surface); }
+    .nav-cta {
+      background: linear-gradient(135deg, var(--primary2), var(--primary));
+      color: #fff; text-decoration: none; font-size: 14px; font-weight: 500;
+      padding: 7px 16px; border-radius: 8px; transition: opacity .2s;
+      display: flex; align-items: center; gap: 7px;
+    }
+    .nav-cta:hover { opacity: 0.85; }
+    @media (max-width: 800px) { .nav-links .nav-link { display: none; } }
+
+    /* ── HERO ── */
+    .hero { padding: 96px 0 70px; text-align: center; position: relative; }
+    .hero-logo {
+      margin-bottom: 28px; display: inline-block;
+      filter: drop-shadow(0 0 34px rgba(99,102,241,0.5));
+      animation: float 5s ease-in-out infinite;
+    }
+    .hero-logo img { display: block; border-radius: 22px; }
+    @keyframes float {
+      0%, 100% { transform: translateY(0); }
+      50%      { transform: translateY(-10px); }
+    }
+    .hero-badge {
+      display: inline-flex; align-items: center; gap: 8px;
+      background: rgba(129,140,248,0.1); border: 1px solid rgba(129,140,248,0.25);
+      color: var(--primary); font-size: 13px; font-weight: 500; font-family: var(--mono);
+      padding: 5px 14px; border-radius: 100px; margin-bottom: 28px;
+    }
+    .hero-badge-dot { width: 7px; height: 7px; background: var(--ok); border-radius: 50%; animation: pulse 2s infinite; }
+    @keyframes pulse {
+      0%, 100% { opacity: 1; transform: scale(1); }
+      50% { opacity: 0.5; transform: scale(0.8); }
+    }
+    .hero h1 {
+      font-size: clamp(38px, 6vw, 66px);
+      font-weight: 800; line-height: 1.1;
+      letter-spacing: -2px; margin-bottom: 24px;
+    }
+    .gradient-text {
+      background: linear-gradient(135deg, #818cf8 0%, #a5b4fc 35%, #fb923c 100%);
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero-sub {
+      font-size: 18px; color: var(--muted2); max-width: 640px;
+      margin: 0 auto 40px; font-weight: 300; line-height: 1.7;
+    }
+    .hero-sub strong { color: var(--text); font-weight: 500; }
+    .hero-sub code {
+      font-family: var(--mono); font-size: 15px; color: var(--accent);
+      background: rgba(251,146,60,0.08); padding: 1px 7px; border-radius: 6px;
+    }
+    .hero-actions { display: flex; gap: 12px; justify-content: center; flex-wrap: wrap; }
+    .btn-primary {
+      background: linear-gradient(135deg, var(--primary2), var(--primary));
+      color: #fff; text-decoration: none; font-weight: 600; font-size: 15px;
+      padding: 12px 28px; border-radius: 10px; transition: all .2s;
+      box-shadow: 0 0 30px rgba(99,102,241,0.3);
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-primary:hover { transform: translateY(-2px); box-shadow: 0 0 40px rgba(99,102,241,0.45); }
+    .btn-ghost {
+      background: var(--surface); border: 1px solid var(--border);
+      color: var(--text); text-decoration: none; font-weight: 500; font-size: 15px;
+      padding: 12px 28px; border-radius: 10px; transition: all .2s;
+      display: inline-flex; align-items: center; gap: 8px;
+    }
+    .btn-ghost:hover { background: rgba(255,255,255,0.07); transform: translateY(-2px); }
+
+    /* ── STATS BAR ── */
+    .stats-bar {
+      margin: 64px 0 0;
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+      gap: 1px;
+      background: var(--border);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+    }
+    .stat { background: var(--bg2); padding: 26px 18px; text-align: center; transition: background .2s; }
+    .stat:hover { background: rgba(129,140,248,0.06); }
+    .stat-value {
+      font-size: 34px; font-weight: 800; letter-spacing: -1.5px;
+      background: linear-gradient(135deg, var(--primary), var(--accent));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+      background-clip: text; line-height: 1;
+    }
+    .stat-label { font-size: 12.5px; color: var(--muted); margin-top: 7px; font-weight: 500; }
+
+    /* ── SECTIONS ── */
+    section { padding: 84px 0; }
+    .section-tag {
+      display: inline-block;
+      background: rgba(251,146,60,0.1); border: 1px solid rgba(251,146,60,0.22);
+      color: var(--accent); font-size: 12px; font-weight: 600; letter-spacing: 1.5px;
+      text-transform: uppercase; padding: 4px 12px; border-radius: 100px;
+      margin-bottom: 16px; font-family: var(--mono);
+    }
+    .section-tag.indigo {
+      background: rgba(129,140,248,0.1); border-color: rgba(129,140,248,0.25);
+      color: var(--primary);
+    }
+    .section-title {
+      font-size: clamp(28px, 4vw, 40px); font-weight: 800;
+      letter-spacing: -1px; line-height: 1.18; margin-bottom: 16px;
+    }
+    .section-sub { font-size: 16.5px; color: var(--muted2); max-width: 620px; font-weight: 300; }
+    .section-sub code { font-family: var(--mono); font-size: 14px; color: var(--accent); }
+
+    /* ── FADE-IN ON SCROLL ── */
+    .fade { opacity: 0; transform: translateY(22px); transition: opacity .6s ease, transform .6s ease; }
+    .fade.visible { opacity: 1; transform: none; }
+
+    /* ── DEMO VIDEO ── */
+    .video-shell {
+      margin-top: 44px;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      overflow: hidden;
+      background: var(--bg2);
+      box-shadow: 0 30px 80px rgba(0,0,0,0.5), 0 0 60px rgba(99,102,241,0.07);
+    }
+    .video-shell video { display: block; width: 100%; height: auto; }
+    .video-caption {
+      font-size: 14px; color: var(--muted2); padding: 16px 22px;
+      border-top: 1px solid var(--border); font-weight: 300;
+    }
+    .video-caption strong { color: var(--text); font-weight: 500; }
+
+    /* ── TERMINALS ── */
+    .term-step { margin-top: 52px; }
+    .term-step-head { display: flex; align-items: baseline; gap: 14px; margin-bottom: 14px; }
+    .term-step-num {
+      font-family: var(--mono); font-weight: 600; font-size: 13px;
+      color: var(--accent); flex-shrink: 0;
+    }
+    .term-step-head h3 { font-size: 18px; font-weight: 700; letter-spacing: -0.3px; }
+    .term-step-desc { font-size: 14.5px; color: var(--muted2); font-weight: 300; margin-bottom: 18px; max-width: 720px; }
+    .term-step-desc code { font-family: var(--mono); font-size: 13px; color: var(--primary); }
+
+    .terminal {
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    }
+    .term-bar {
+      display: flex; align-items: center; gap: 8px;
+      padding: 11px 16px;
+      background: rgba(255,255,255,0.03);
+      border-bottom: 1px solid var(--border);
+    }
+    .term-dot { width: 11px; height: 11px; border-radius: 50%; opacity: 0.85; }
+    .term-dot.r { background: #f87171; } .term-dot.y { background: #fbbf24; } .term-dot.g { background: #34d399; }
+    .term-title {
+      font-family: var(--mono); font-size: 12px; color: var(--muted);
+      margin-left: 8px; flex: 1; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    }
+    .term-replay {
+      background: none; border: 1px solid var(--border); color: var(--muted2);
+      font-family: var(--mono); font-size: 11px; padding: 3px 10px;
+      border-radius: 6px; cursor: pointer; transition: all .2s;
+    }
+    .term-replay:hover { color: var(--text); border-color: var(--muted); }
+    .term-body {
+      padding: 18px 20px;
+      font-family: var(--mono); font-size: 13px; line-height: 1.75;
+      white-space: pre; overflow-x: auto;
+      color: var(--muted2);
+    }
+    .term-line { min-height: 1.75em; }
+    .t-prompt { color: var(--ok); font-weight: 600; }
+    .t-cmd { color: var(--text); }
+    .t-cursor {
+      display: inline-block; width: 8px; height: 1.1em;
+      background: var(--text); vertical-align: text-bottom;
+      animation: blink 1s steps(1) infinite; margin-left: 1px;
+    }
+    @keyframes blink { 50% { opacity: 0; } }
+    .t-key  { color: #a5b4fc; }
+    .t-str  { color: #fdba74; }
+    .t-num  { color: #5eead4; }
+    .t-ok   { color: var(--ok); }
+    .t-dim  { color: var(--muted); }
+    .t-state-q { color: var(--muted2); }
+    .t-state-w { color: var(--primary); }
+    .t-state-e { color: var(--accent); }
+    .t-state-r { color: var(--ok); font-weight: 600; }
+
+    /* ── STATE MACHINE STRIP ── */
+    .state-strip {
+      margin: 48px 0 8px;
+      display: flex; align-items: center; justify-content: center;
+      gap: 8px; flex-wrap: wrap;
+    }
+    .state-pill {
+      font-family: var(--mono); font-size: 12px; font-weight: 500;
+      padding: 7px 14px; border-radius: 100px;
+      border: 1px solid var(--border); color: var(--muted);
+      background: var(--surface); transition: all .45s ease;
+      letter-spacing: 0.5px;
+    }
+    .state-arrow { color: var(--muted); font-size: 12px; user-select: none; }
+    .state-pill.active {
+      color: #fff; border-color: rgba(129,140,248,0.6);
+      background: linear-gradient(135deg, rgba(99,102,241,0.35), rgba(251,146,60,0.25));
+      box-shadow: 0 0 22px rgba(99,102,241,0.35);
+    }
+    .state-pill.done { color: var(--ok); border-color: rgba(52,211,153,0.35); }
+    .state-pill.active.final {
+      border-color: rgba(52,211,153,0.7);
+      background: rgba(52,211,153,0.16);
+      box-shadow: 0 0 22px rgba(52,211,153,0.35);
+    }
+    .state-caption { text-align: center; font-size: 13.5px; color: var(--muted); margin-top: 14px; font-weight: 300; }
+    .state-caption code { font-family: var(--mono); font-size: 12.5px; color: var(--muted2); }
+
+    /* ── HOW IT WORKS STEPS ── */
+    .steps-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+      gap: 16px; margin-top: 48px;
+    }
+    .step-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 26px;
+      position: relative; transition: all .3s;
+    }
+    .step-card:hover { border-color: rgba(251,146,60,0.3); transform: translateY(-3px); }
+    .step-num {
+      font-family: var(--mono); font-size: 13px; font-weight: 600;
+      color: var(--accent); margin-bottom: 14px; display: block;
+    }
+    .step-card h3 { font-size: 16px; font-weight: 700; margin-bottom: 8px; }
+    .step-card p { font-size: 13.5px; color: var(--muted2); line-height: 1.65; font-weight: 300; }
+    .step-card p code { font-family: var(--mono); font-size: 12px; color: var(--primary); }
+
+    /* ── FEATURES ── */
+    .features-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(255px, 1fr));
+      gap: 16px; margin-top: 48px;
+    }
+    .feature-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 26px;
+      transition: all .3s; position: relative; overflow: hidden;
+    }
+    .feature-card::before {
+      content: '';
+      position: absolute; inset: 0;
+      background: linear-gradient(135deg, rgba(99,102,241,0.07), transparent 60%);
+      opacity: 0; transition: opacity .3s;
+    }
+    .feature-card:hover { border-color: rgba(129,140,248,0.3); transform: translateY(-3px); }
+    .feature-card:hover::before { opacity: 1; }
+    .feature-icon {
+      width: 44px; height: 44px;
+      background: linear-gradient(135deg, rgba(99,102,241,0.15), rgba(251,146,60,0.12));
+      border: 1px solid rgba(129,140,248,0.2);
+      border-radius: 10px; display: grid; place-items: center;
+      font-size: 20px; margin-bottom: 16px;
+    }
+    .feature-card h3 { font-size: 15.5px; font-weight: 700; margin-bottom: 8px; }
+    .feature-card p { font-size: 13.5px; color: var(--muted2); line-height: 1.65; font-weight: 300; }
+    .feature-card p code { font-family: var(--mono); font-size: 12px; color: var(--accent); }
+
+    /* ── HONESTY CALLOUT ── */
+    .callout {
+      margin-top: 56px;
+      border: 1px solid rgba(251,146,60,0.35);
+      background: rgba(234,88,12,0.06);
+      border-radius: var(--radius-lg);
+      padding: 26px 30px;
+    }
+    .callout h3 { color: var(--accent); font-size: 15px; font-weight: 700; margin-bottom: 8px; }
+    .callout p { font-size: 14px; color: var(--muted2); line-height: 1.7; font-weight: 300; }
+    .callout p strong { color: var(--text); font-weight: 500; }
+    .callout p em { color: var(--accent); font-style: normal; }
+
+    /* ── QUICK START ── */
+    .code-window {
+      margin-top: 44px;
+      background: var(--code-bg);
+      border: 1px solid var(--border);
+      border-radius: 14px; overflow: hidden;
+      box-shadow: 0 24px 60px rgba(0,0,0,0.45);
+    }
+    .code-body {
+      padding: 22px 24px; font-family: var(--mono); font-size: 13.5px;
+      line-height: 1.9; overflow-x: auto; white-space: pre; color: var(--text);
+    }
+    .code-body .c { color: var(--muted); }
+    .code-body .p { color: var(--ok); font-weight: 600; }
+    .urls-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+      gap: 12px; margin-top: 22px;
+    }
+    .url-card {
+      display: flex; flex-direction: column; gap: 3px;
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius); padding: 14px 18px;
+      text-decoration: none; transition: all .2s;
+    }
+    .url-card:hover { border-color: rgba(129,140,248,0.35); }
+    .url-card .u-name { font-size: 13.5px; font-weight: 600; color: var(--text); }
+    .url-card .u-addr { font-family: var(--mono); font-size: 12px; color: var(--primary); }
+
+    /* ── API TABLE ── */
+    .api-table-wrap {
+      margin-top: 44px; overflow-x: auto;
+      border: 1px solid var(--border); border-radius: var(--radius-lg);
+      background: var(--bg2);
+    }
+    table.api { width: 100%; border-collapse: collapse; font-size: 13px; min-width: 640px; }
+    table.api th {
+      text-align: left; font-family: var(--mono); font-weight: 600; font-size: 11px;
+      text-transform: uppercase; letter-spacing: 1px; color: var(--muted);
+      padding: 14px 18px; border-bottom: 1px solid var(--border);
+    }
+    table.api td { padding: 12px 18px; border-bottom: 1px solid rgba(255,255,255,0.04); vertical-align: top; }
+    table.api tr:last-child td { border-bottom: none; }
+    table.api tr:hover td { background: rgba(129,140,248,0.04); }
+    .method {
+      font-family: var(--mono); font-size: 11px; font-weight: 600;
+      padding: 2px 9px; border-radius: 6px; display: inline-block;
+    }
+    .method.get  { color: var(--primary); background: rgba(129,140,248,0.12); }
+    .method.post { color: var(--accent);  background: rgba(251,146,60,0.12); }
+    td.path { font-family: var(--mono); font-size: 12.5px; color: var(--text); white-space: nowrap; }
+    td.desc { color: var(--muted2); font-weight: 300; }
+    td.desc code { font-family: var(--mono); font-size: 11.5px; color: var(--accent); }
+
+    /* ── ECOSYSTEM ── */
+    .eco-grid {
+      display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+      gap: 16px; margin-top: 48px;
+    }
+    .eco-card {
+      background: var(--surface); border: 1px solid var(--border);
+      border-radius: var(--radius-lg); padding: 28px;
+      text-decoration: none; transition: all .3s; display: block;
+    }
+    .eco-card:hover { border-color: rgba(251,146,60,0.35); transform: translateY(-3px); }
+    .eco-emoji { font-size: 26px; margin-bottom: 14px; display: block; }
+    .eco-card h3 { font-size: 17px; font-weight: 700; color: var(--text); margin-bottom: 6px; font-family: var(--mono); letter-spacing: -0.4px; }
+    .eco-card p { font-size: 13.5px; color: var(--muted2); line-height: 1.6; font-weight: 300; }
+    .eco-role {
+      display: inline-block; margin-top: 14px;
+      font-family: var(--mono); font-size: 11px; letter-spacing: 0.8px;
+      color: var(--primary); text-transform: uppercase;
+    }
+    .eco-card.here { border-color: rgba(129,140,248,0.35); background: rgba(99,102,241,0.06); }
+    .eco-card.here .eco-role { color: var(--accent); }
+
+    /* ── CONTRIBUTE ── */
+    .contribute {
+      text-align: center;
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      background:
+        radial-gradient(ellipse at 30% 0%, rgba(99,102,241,0.12), transparent 60%),
+        radial-gradient(ellipse at 70% 100%, rgba(234,88,12,0.1), transparent 60%),
+        var(--bg2);
+      padding: 70px 30px;
+    }
+    .contribute h2 { font-size: clamp(26px, 3.6vw, 36px); font-weight: 800; letter-spacing: -1px; margin-bottom: 14px; }
+    .contribute p { color: var(--muted2); max-width: 540px; margin: 0 auto 32px; font-weight: 300; font-size: 16px; }
+
+    /* ── FOOTER ── */
+    footer { border-top: 1px solid var(--border); padding: 34px 0; }
+    .footer-inner {
+      display: flex; align-items: center; justify-content: space-between;
+      gap: 18px; flex-wrap: wrap;
+    }
+    .footer-left { display: flex; align-items: center; gap: 12px; color: var(--muted); font-size: 13.5px; }
+    .footer-left img { border-radius: 6px; }
+    .footer-links { display: flex; gap: 18px; flex-wrap: wrap; }
+    .footer-links a { color: var(--muted2); text-decoration: none; font-size: 13.5px; transition: color .2s; }
+    .footer-links a:hover { color: var(--text); }
+
+    @media (max-width: 540px) {
+      .hero { padding-top: 72px; }
+      .hero h1 { font-size: 31px; letter-spacing: -1px; }
+      .hero h1 br { display: none; }
+      .term-body, .code-body { font-size: 12px; }
+    }
+
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .hero-logo, .hero-badge-dot, .t-cursor { animation: none; }
+      .fade { opacity: 1; transform: none; transition: none; }
+      * { transition-duration: 0.01ms !important; }
+    }
+  </style>
+</head>
+<body>
+
+  <div class="blob blob-1"></div>
+  <div class="blob blob-2"></div>
+  <div class="blob blob-3"></div>
+
+  <!-- ───────────────────────── NAV ───────────────────────── -->
+  <nav>
+    <div class="container nav-inner">
+      <a class="nav-logo" href="#">
+        <img class="nav-logo-img" src="logo/logo.svg" alt="nlp-kotlin-playground" width="32" height="32" />
+        <span class="nav-logo-text">nlp-kotlin-playground</span>
+      </a>
+      <div class="nav-links">
+        <a class="nav-link" href="#demo">Demo</a>
+        <a class="nav-link" href="#terminal">See it run</a>
+        <a class="nav-link" href="#how">How it works</a>
+        <a class="nav-link" href="#start">Quick start</a>
+        <a class="nav-link" href="#api">API</a>
+        <a class="nav-cta" href="https://github.com/HectorIFC/nlp-kotlin-playground">
+          <svg width="15" height="15" viewBox="0 0 16 16" fill="currentColor"><path d="M8 0C3.58 0 0 3.58 0 8c0 3.54 2.29 6.53 5.47 7.59.4.07.55-.17.55-.38 0-.19-.01-.82-.01-1.49-2.01.37-2.53-.49-2.69-.94-.09-.23-.48-.94-.82-1.13-.28-.15-.68-.52-.01-.53.63-.01 1.08.58 1.23.82.72 1.21 1.87.87 2.33.66.07-.52.28-.87.51-1.07-1.78-.2-3.64-.89-3.64-3.95 0-.87.31-1.59.82-2.15-.08-.2-.36-1.02.08-2.12 0 0 .67-.21 2.2.82.64-.18 1.32-.27 2-.27s1.36.09 2 .27c1.53-1.04 2.2-.82 2.2-.82.44 1.1.16 1.92.08 2.12.51.56.82 1.27.82 2.15 0 3.07-1.87 3.75-3.65 3.95.29.25.54.73.54 1.48 0 1.07-.01 1.93-.01 2.2 0 .21.15.46.55.38A8.01 8.01 0 0 0 16 8c0-4.42-3.58-8-8-8z"/></svg>
+          GitHub
+        </a>
+      </div>
+    </div>
+  </nav>
+
+  <!-- ───────────────────────── HERO ───────────────────────── -->
+  <header class="hero">
+    <div class="container">
+      <div class="hero-logo">
+        <img src="logo/logo.svg" alt="nlp-kotlin-playground" width="88" height="88" />
+      </div>
+      <div>
+        <div class="hero-badge"><span class="hero-badge-dot"></span>v0.1.1</div>
+      </div>
+      <h1>An NLP pipeline on <br /><span class="gradient-text">real distributed rails</span>.</h1>
+      <p class="hero-sub">
+        Corpus in, semantic search out — <strong>byte-level BPE</strong> (Tessera) and
+        <strong>lookup embeddings</strong> (Mosaic), running behind a queue-based backbone of
+        RabbitMQ, MinIO and SQLite. Pure Kotlin. One <code>docker compose up</code> and you're in.
+      </p>
+      <div class="hero-actions">
+        <a class="btn-primary" href="#demo">▶&#xFE0E; Watch the demo</a>
+        <a class="btn-ghost" href="https://github.com/HectorIFC/nlp-kotlin-playground">View on GitHub</a>
+      </div>
+
+      <div class="stats-bar fade">
+        <div class="stat"><div class="stat-value"><span class="count" data-target="6">0</span></div><div class="stat-label">pipeline states</div></div>
+        <div class="stat"><div class="stat-value"><span class="count" data-target="11">0</span></div><div class="stat-label">HTTP endpoints</div></div>
+        <div class="stat"><div class="stat-value"><span class="count" data-target="3">0</span></div><div class="stat-label">bundled corpora</div></div>
+        <div class="stat"><div class="stat-value"><span class="count" data-target="2">0</span></div><div class="stat-label">queue workers</div></div>
+        <div class="stat"><div class="stat-value"><span class="count" data-target="1">0</span></div><div class="stat-label">command to run it</div></div>
+      </div>
+    </div>
+  </header>
+
+  <!-- ───────────────────────── DEMO VIDEO ───────────────────────── -->
+  <section id="demo">
+    <div class="container narrow">
+      <div class="fade">
+        <span class="section-tag">Demo</span>
+        <h2 class="section-title">Ninety seconds, end to end.</h2>
+        <p class="section-sub">
+          Corpus upload → message lands in RabbitMQ → a worker pulls it from MinIO → SQLite tracks
+          every state transition → search runs against the cached pipeline. Plus a failure demo
+          where a malformed corpus lands in the dead-letter queue.
+        </p>
+      </div>
+      <div class="video-shell fade">
+        <video src="demo.mp4" controls preload="metadata" poster="poster.jpg"></video>
+        <div class="video-caption">
+          <strong>Full walkthrough</strong> — upload, queue, training states, semantic search and the DLQ failure path.
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── TERMINALS ───────────────────────── -->
+  <section id="terminal">
+    <div class="container narrow">
+      <div class="fade">
+        <span class="section-tag indigo">See it run</span>
+        <h2 class="section-title">The whole flow, three commands.</h2>
+        <p class="section-sub">
+          These transcripts match the real API responses byte for byte — the same JSON you'll
+          get on <code>localhost:8080</code> after <code>docker compose up</code>.
+        </p>
+      </div>
+
+      <div class="term-step fade">
+        <div class="term-step-head"><span class="term-step-num">01</span><h3>Boot the stack</h3></div>
+        <p class="term-step-desc">
+          One command starts the app, MinIO and RabbitMQ. <code>/health</code> answers 200 only
+          when all three dependencies are reachable.
+        </p>
+        <div class="terminal" data-script="boot">
+          <div class="term-bar">
+            <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+            <span class="term-title">zsh — nlp-kotlin-playground</span>
+            <button class="term-replay" type="button">↻ replay</button>
+          </div>
+          <div class="term-body" style="min-height: 330px"></div>
+        </div>
+      </div>
+
+      <div class="term-step fade">
+        <div class="term-step-head"><span class="term-step-num">02</span><h3>Upload a corpus — and don't wait for it</h3></div>
+        <p class="term-step-desc">
+          <code>POST /upload</code> answers <code>202 Accepted</code> in milliseconds with a
+          <code>trainingId</code>. BPE training happens off the request thread: poll the status
+          and watch the state machine walk to <code>READY</code>.
+        </p>
+        <div class="terminal" data-script="train">
+          <div class="term-bar">
+            <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+            <span class="term-title">zsh — upload &amp; poll</span>
+            <button class="term-replay" type="button">↻ replay</button>
+          </div>
+          <div class="term-body" style="min-height: 460px"></div>
+        </div>
+      </div>
+
+      <div class="term-step fade">
+        <div class="term-step-head"><span class="term-step-num">03</span><h3>Search the trained pipeline</h3></div>
+        <p class="term-step-desc">
+          Top-K cosine-similar sentences for any query, resolved against model artifacts streamed
+          from MinIO through a small LRU cache.
+        </p>
+        <div class="terminal" data-script="search">
+          <div class="term-bar">
+            <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+            <span class="term-title">zsh — semantic search</span>
+            <button class="term-replay" type="button">↻ replay</button>
+          </div>
+          <div class="term-body" style="min-height: 320px"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── HOW IT WORKS ───────────────────────── -->
+  <section id="how">
+    <div class="container">
+      <div class="fade">
+        <span class="section-tag">How it works</span>
+        <h2 class="section-title">A state machine you can trust.</h2>
+        <p class="section-sub">
+          Every corpus walks the same six states. Every transition is persisted to SQLite before
+          the worker moves on — restart-proof, refresh-proof, audit-friendly.
+        </p>
+      </div>
+
+      <div class="state-strip fade" id="stateStrip">
+        <span class="state-pill">QUEUED</span><span class="state-arrow">→</span>
+        <span class="state-pill">DOWNLOADING</span><span class="state-arrow">→</span>
+        <span class="state-pill">TOKENIZING</span><span class="state-arrow">→</span>
+        <span class="state-pill">EMBEDDING</span><span class="state-arrow">→</span>
+        <span class="state-pill">INDEXING</span><span class="state-arrow">→</span>
+        <span class="state-pill final">READY</span>
+      </div>
+      <p class="state-caption fade">Failures route to a dead-letter queue — the consumer never silently retries. <code>GET /api/training/{id}</code> returns the full event timeline.</p>
+
+      <div class="steps-grid">
+        <div class="step-card fade">
+          <span class="step-num">01 · UPLOAD</span>
+          <h3>202, instantly</h3>
+          <p><code>POST /upload</code> streams the corpus to MinIO, inserts a <code>QUEUED</code> row in SQLite, publishes a message to RabbitMQ and returns a <code>trainingId</code> — the HTTP thread never blocks on training.</p>
+        </div>
+        <div class="step-card fade">
+          <span class="step-num">02 · QUEUE</span>
+          <h3>Durable by default</h3>
+          <p>A durable exchange feeds a consumer pool (2 workers by default) that drains the queue at its own pace. Malformed corpora are rejected into the DLQ for manual inspection.</p>
+        </div>
+        <div class="step-card fade">
+          <span class="step-num">03 · TRAIN</span>
+          <h3>Tessera + Mosaic</h3>
+          <p>The worker downloads the blob, trains byte-level BPE with Tessera, builds the Mosaic lookup table and indexes every sentence — persisting each state change as it goes.</p>
+        </div>
+        <div class="step-card fade">
+          <span class="step-num">04 · SERVE</span>
+          <h3>Search from cache</h3>
+          <p>Artifacts land in <code>trained-models/{trainingId}/</code> on MinIO. Search, tokenize and compare resolve through an LRU cache that streams artifacts on demand.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── FEATURES ───────────────────────── -->
+  <section id="features">
+    <div class="container">
+      <div class="fade">
+        <span class="section-tag indigo">Features</span>
+        <h2 class="section-title">Production-shaped, demo-sized.</h2>
+        <p class="section-sub">
+          The architecture lessons are real — durable queues, idempotent consumers, state machines,
+          graceful shutdown — at a scale you can read in an afternoon.
+        </p>
+      </div>
+      <div class="features-grid">
+        <div class="feature-card fade">
+          <div class="feature-icon">🧩</div>
+          <h3>Byte-level BPE</h3>
+          <p>Tessera tokenizes any UTF-8 corpus with no pre-built vocabulary — the same algorithm family GPT-style models use.</p>
+        </div>
+        <div class="feature-card fade">
+          <div class="feature-icon">🎨</div>
+          <h3>Lookup embeddings</h3>
+          <p>Mosaic assigns each token a vector from a lookup table; sentences are mean-pooled and compared by cosine similarity.</p>
+        </div>
+        <div class="feature-card fade">
+          <div class="feature-icon">📨</div>
+          <h3>Queue-based training</h3>
+          <p>Uploads return <code>202</code> immediately. RabbitMQ buffers the work; a consumer pool processes it without blocking HTTP.</p>
+        </div>
+        <div class="feature-card fade">
+          <div class="feature-icon">🪣</div>
+          <h3>Object storage</h3>
+          <p>Corpora and model artifacts live in MinIO with TTL rules — real S3-style code paths without standing up AWS.</p>
+        </div>
+        <div class="feature-card fade">
+          <div class="feature-icon">🗄️</div>
+          <h3>SQLite state machine</h3>
+          <p>Every transition persisted through Exposed in WAL mode. The dashboard reads the same rows the workers write.</p>
+        </div>
+        <div class="feature-card fade">
+          <div class="feature-icon">☠️</div>
+          <h3>Dead-letter queue</h3>
+          <p>Failures park in the DLQ with the original payload intact — no silent retries, no swallowed errors.</p>
+        </div>
+        <div class="feature-card fade">
+          <div class="feature-icon">📈</div>
+          <h3>Prometheus metrics</h3>
+          <p><code>/metrics</code> exposes counters in Prometheus text format — uploads, trainings, searches, failures.</p>
+        </div>
+        <div class="feature-card fade">
+          <div class="feature-icon">🐳</div>
+          <h3>One command</h3>
+          <p>App + MinIO + RabbitMQ + SQLite, all from a single <code>docker compose up</code>. JVM 21, Ktor 3, Kotlin 2.3.</p>
+        </div>
+      </div>
+
+      <div class="callout fade">
+        <h3>About these results — honest by design</h3>
+        <p>
+          Mosaic provides embeddings as a <strong>lookup table</strong> — the vectors are randomly
+          initialized, <em>not trained</em>. The pipeline (tokenization → vector lookup → mean pooling
+          → cosine similarity) is real and identical to production-grade pipelines, but without
+          training the similarities reflect random structure, not semantic meaning. Training
+          (Word2Vec / GloVe / etc) is a separate future project.
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── QUICK START ───────────────────────── -->
+  <section id="start">
+    <div class="container narrow">
+      <div class="fade">
+        <span class="section-tag">Quick start</span>
+        <h2 class="section-title">Running in one minute.</h2>
+        <p class="section-sub">
+          Clone and compose — or pull the published image straight from GitHub Container Registry.
+        </p>
+      </div>
+
+      <div class="code-window fade">
+        <div class="term-bar">
+          <span class="term-dot r"></span><span class="term-dot y"></span><span class="term-dot g"></span>
+          <span class="term-title">quick start</span>
+        </div>
+        <div class="code-body"><span class="c"># clone &amp; run the full stack</span>
+<span class="p">$</span> git clone https://github.com/HectorIFC/nlp-kotlin-playground.git
+<span class="p">$</span> cd nlp-kotlin-playground
+<span class="p">$</span> docker compose up
+
+<span class="c"># or pull the published image (MinIO + RabbitMQ still required)</span>
+<span class="p">$</span> docker pull ghcr.io/hectorifc/nlp-kotlin-playground:v0.1.1</div>
+      </div>
+
+      <div class="urls-grid fade">
+        <div class="url-card"><span class="u-name">Playground</span><span class="u-addr">localhost:8080</span></div>
+        <div class="url-card"><span class="u-name">Trainings dashboard</span><span class="u-addr">localhost:8080/trainings</span></div>
+        <div class="url-card"><span class="u-name">MinIO console</span><span class="u-addr">localhost:9001</span></div>
+        <div class="url-card"><span class="u-name">RabbitMQ management</span><span class="u-addr">localhost:15672</span></div>
+        <div class="url-card"><span class="u-name">Metrics</span><span class="u-addr">localhost:8080/metrics</span></div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── API ───────────────────────── -->
+  <section id="api">
+    <div class="container narrow">
+      <div class="fade">
+        <span class="section-tag indigo">HTTP API</span>
+        <h2 class="section-title">Eleven endpoints, zero magic.</h2>
+        <p class="section-sub">
+          Plain JSON over HTTP. The dashboard uses exactly this surface — nothing privileged.
+        </p>
+      </div>
+      <div class="api-table-wrap fade">
+        <table class="api">
+          <thead><tr><th>Method</th><th>Path</th><th>Returns</th></tr></thead>
+          <tbody>
+            <tr><td><span class="method get">GET</span></td><td class="path">/health</td><td class="desc"><code>200</code> when SQLite + MinIO + RabbitMQ are all reachable, <code>503</code> otherwise</td></tr>
+            <tr><td><span class="method get">GET</span></td><td class="path">/pretrained</td><td class="desc">List of bundled corpora</td></tr>
+            <tr><td><span class="method post">POST</span></td><td class="path">/pretrained/{name}</td><td class="desc"><code>201</code> — bundled corpus persisted as a READY training row</td></tr>
+            <tr><td><span class="method post">POST</span></td><td class="path">/upload</td><td class="desc"><code>202</code> + <code>trainingId</code> — multipart upload, ≤ 2 MB UTF-8</td></tr>
+            <tr><td><span class="method get">GET</span></td><td class="path">/api/training/{id}</td><td class="desc">Training detail + full event timeline</td></tr>
+            <tr><td><span class="method get">GET</span></td><td class="path">/api/trainings</td><td class="desc">Paginated list — filter by <code>status</code>, <code>since</code>, <code>limit</code></td></tr>
+            <tr><td><span class="method get">GET</span></td><td class="path">/api/trainings/active</td><td class="desc">Non-terminal trainings only</td></tr>
+            <tr><td><span class="method post">POST</span></td><td class="path">/api/search/{trainingId}</td><td class="desc">Top-K hits sorted by cosine similarity</td></tr>
+            <tr><td><span class="method post">POST</span></td><td class="path">/api/tokenize/{trainingId}</td><td class="desc">Tokens + IDs for any string</td></tr>
+            <tr><td><span class="method post">POST</span></td><td class="path">/api/similarity/{trainingId}</td><td class="desc">Cosine score between two strings</td></tr>
+            <tr><td><span class="method get">GET</span></td><td class="path">/metrics</td><td class="desc">Prometheus text counters</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── ECOSYSTEM ───────────────────────── -->
+  <section id="ecosystem">
+    <div class="container">
+      <div class="fade">
+        <span class="section-tag">Ecosystem</span>
+        <h2 class="section-title">Three repos, one pipeline.</h2>
+        <p class="section-sub">
+          A pure-Kotlin NLP ecosystem under MIT. Tessera and Mosaic are consumed as JitPack
+          dependencies — no code is re-implemented here.
+        </p>
+      </div>
+      <div class="eco-grid">
+        <a class="eco-card fade" href="https://github.com/HectorIFC/tessera">
+          <span class="eco-emoji">🧩</span>
+          <h3>tessera</h3>
+          <p>Byte-level BPE tokenizer in pure Kotlin. GPT-style vocabulary training, zero ML dependencies.</p>
+          <span class="eco-role">The tokenizer</span>
+        </a>
+        <a class="eco-card fade" href="https://github.com/HectorIFC/mosaic">
+          <span class="eco-emoji">🎨</span>
+          <h3>mosaic</h3>
+          <p>Lookup-based token embeddings built on top of Tessera — vectors, pooling and cosine similarity.</p>
+          <span class="eco-role">The embeddings</span>
+        </a>
+        <a class="eco-card here fade" href="https://github.com/HectorIFC/nlp-kotlin-playground">
+          <span class="eco-emoji">🛝</span>
+          <h3>nlp-kotlin-playground</h3>
+          <p>This project — the two libraries wired into a distributed, production-shaped web application.</p>
+          <span class="eco-role">You are here</span>
+        </a>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── CONTRIBUTE ───────────────────────── -->
+  <section>
+    <div class="container">
+      <div class="contribute fade">
+        <h2>Built in the open.</h2>
+        <p>
+          Spotted a bug, want SSE instead of polling, or curious about the architecture decisions?
+          Issues and pull requests are welcome.
+        </p>
+        <div class="hero-actions">
+          <a class="btn-primary" href="https://github.com/HectorIFC/nlp-kotlin-playground">⭐&#xFE0E; Star on GitHub</a>
+          <a class="btn-ghost" href="https://github.com/HectorIFC/nlp-kotlin-playground/blob/main/ARCHITECTURE.md">Read the architecture</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ───────────────────────── FOOTER ───────────────────────── -->
+  <footer>
+    <div class="container footer-inner">
+      <div class="footer-left">
+        <img src="logo/logo.svg" alt="" width="24" height="24" />
+        <span>MIT License · v0.1.1</span>
+      </div>
+      <div class="footer-links">
+        <a href="https://github.com/HectorIFC/nlp-kotlin-playground">GitHub</a>
+        <a href="https://github.com/HectorIFC/nlp-kotlin-playground/blob/main/ARCHITECTURE.md">Architecture</a>
+        <a href="https://github.com/HectorIFC/nlp-kotlin-playground/blob/main/CHANGELOG.md">Changelog</a>
+        <a href="https://github.com/HectorIFC/nlp-kotlin-playground/pkgs/container/nlp-kotlin-playground">Container image</a>
+        <a href="https://github.com/HectorIFC/tessera">Tessera</a>
+        <a href="https://github.com/HectorIFC/mosaic">Mosaic</a>
+      </div>
+    </div>
+  </footer>
+
+  <script>
+    const reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+    /* ── COUNT-UP STATS ── */
+    function animateCount(el) {
+      const target = parseInt(el.dataset.target, 10);
+      if (reduceMotion) { el.textContent = target; return; }
+      const duration = 1400, start = performance.now();
+      function tick(now) {
+        const t = Math.min((now - start) / duration, 1);
+        const eased = 1 - Math.pow(1 - t, 3);
+        el.textContent = Math.round(eased * target);
+        if (t < 1) requestAnimationFrame(tick);
+      }
+      requestAnimationFrame(tick);
+    }
+
+    /* ── TERMINAL SCRIPTS ──
+       Lines mirror the app's real DTOs: UploadAcceptedResponse, HealthResponse,
+       SearchResponse — keep them in sync if the API shapes change. */
+    const TID = '7c9e6679-7425-40de-944b-e07fc1f90ae7';
+    const k = s => `<span class="t-key">"${s}"</span>`;
+    const str = s => `<span class="t-str">"${s}"</span>`;
+    const num = s => `<span class="t-num">${s}</span>`;
+
+    const SCRIPTS = {
+      boot: [
+        { cmd: 'docker compose up -d' },
+        { out: '<span class="t-dim">[+] Running 5/5</span>', d: 420 },
+        { out: ' <span class="t-ok">✔</span> Network nlp-kotlin-playground_default  <span class="t-dim">Created</span>', d: 160 },
+        { out: ' <span class="t-ok">✔</span> Container minio                        <span class="t-ok">Healthy</span>', d: 260 },
+        { out: ' <span class="t-ok">✔</span> Container rabbitmq                     <span class="t-ok">Healthy</span>', d: 260 },
+        { out: ' <span class="t-ok">✔</span> Container minio-init                   <span class="t-dim">Exited</span>', d: 160 },
+        { out: ' <span class="t-ok">✔</span> Container nlp-kotlin-playground        <span class="t-ok">Started</span>', d: 300 },
+        { pause: 500 },
+        { cmd: 'curl -s localhost:8080/health | jq' },
+        { out: '{', d: 120 },
+        { out: `  ${k('status')}: ${str('ok')},`, d: 60 },
+        { out: `  ${k('database')}: ${num('true')},`, d: 60 },
+        { out: `  ${k('storage')}: ${num('true')},`, d: 60 },
+        { out: `  ${k('rabbit')}: ${num('true')}`, d: 60 },
+        { out: '}', d: 60 },
+      ],
+      train: [
+        { cmd: 'curl -s -F "file=@alice.txt" localhost:8080/upload | jq' },
+        { out: '{', d: 260 },
+        { out: `  ${k('trainingId')}: ${str(TID)},`, d: 60 },
+        { out: `  ${k('status')}: ${str('queued')},`, d: 60 },
+        { out: `  ${k('statusUrl')}: ${str('/api/training/' + TID)},`, d: 60 },
+        { out: `  ${k('progressUrl')}: ${str('/training/' + TID + '/progress')}`, d: 60 },
+        { out: '}', d: 60 },
+        { pause: 450 },
+        { cmd: 'TID=' + TID },
+        { cmd: "while sleep 2; do curl -s localhost:8080/api/training/$TID | jq -r '.status'; done" },
+        { out: '<span class="t-state-q">QUEUED</span>', d: 600 },
+        { out: '<span class="t-state-w">DOWNLOADING</span>', d: 600 },
+        { out: '<span class="t-state-w">TOKENIZING</span>', d: 700 },
+        { out: '<span class="t-state-e">EMBEDDING</span>', d: 700 },
+        { out: '<span class="t-state-e">INDEXING</span>', d: 600 },
+        { out: '<span class="t-state-r">READY</span>', d: 500 },
+        { out: '<span class="t-dim">^C</span>', d: 200 },
+      ],
+      search: [
+        { cmd: "curl -s -X POST localhost:8080/api/search/$TID \\\n    -H 'Content-Type: application/json' \\\n    -d '{\"query\": \"down the rabbit hole\", \"topK\": 3}' | jq" },
+        { out: '{', d: 300 },
+        { out: `  ${k('query')}: ${str('down the rabbit hole')},`, d: 60 },
+        { out: `  ${k('results')}: [`, d: 60 },
+        { out: `    { ${k('sentence')}: ${str('Down, down, down. Would the fall never come to an end!')}, ${k('score')}: ${num('0.3142')} },`, d: 90 },
+        { out: `    { ${k('sentence')}: ${str('The rabbit-hole went straight on like a tunnel for some way.')}, ${k('score')}: ${num('0.2867')} },`, d: 90 },
+        { out: `    { ${k('sentence')}: ${str('Alice was beginning to get very tired of sitting by her sister.')}, ${k('score')}: ${num('0.2519')} }`, d: 90 },
+        { out: '  ]', d: 60 },
+        { out: '}', d: 60 },
+      ],
+    };
+
+    /* ── TERMINAL ENGINE ── */
+    const sleep = ms => new Promise(r => setTimeout(r, ms));
+    const playing = new WeakMap();
+
+    async function playTerminal(termEl) {
+      const body = termEl.querySelector('.term-body');
+      const script = SCRIPTS[termEl.dataset.script];
+      const token = Symbol();
+      playing.set(termEl, token);
+      const cancelled = () => playing.get(termEl) !== token;
+      body.innerHTML = '';
+
+      for (const step of script) {
+        if (cancelled()) return;
+        if (step.pause) { if (!reduceMotion) await sleep(step.pause); continue; }
+
+        const line = document.createElement('div');
+        line.className = 'term-line';
+        body.appendChild(line);
+
+        if (step.cmd !== undefined) {
+          line.innerHTML = '<span class="t-prompt">$</span> ';
+          const cmdSpan = document.createElement('span');
+          cmdSpan.className = 't-cmd';
+          line.appendChild(cmdSpan);
+          if (reduceMotion) { cmdSpan.textContent = step.cmd; continue; }
+          const cursor = document.createElement('span');
+          cursor.className = 't-cursor';
+          line.appendChild(cursor);
+          for (const ch of step.cmd) {
+            if (cancelled()) { cursor.remove(); return; }
+            cmdSpan.textContent += ch;
+            await sleep(ch === '\n' ? 110 : 14 + Math.random() * 26);
+          }
+          await sleep(300);
+          cursor.remove();
+        } else {
+          line.innerHTML = step.out;
+          if (!reduceMotion) await sleep(step.d ?? 60);
+        }
+      }
+    }
+
+    document.querySelectorAll('.terminal').forEach(termEl => {
+      termEl.querySelector('.term-replay').addEventListener('click', () => playTerminal(termEl));
+    });
+
+    const termObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          playTerminal(entry.target);
+          termObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.35 });
+    document.querySelectorAll('.terminal').forEach(t => termObserver.observe(t));
+
+    /* ── STATE MACHINE STRIP ── */
+    const strip = document.getElementById('stateStrip');
+    const pills = [...strip.querySelectorAll('.state-pill')];
+    let stateIdx = -1;
+    function stepStates() {
+      stateIdx += 1;
+      if (stateIdx > pills.length + 1) {  // brief blank beat, then restart
+        stateIdx = -1;
+        pills.forEach(p => p.classList.remove('active', 'done'));
+      } else {
+        pills.forEach((p, i) => {
+          p.classList.toggle('active', i === stateIdx);
+          p.classList.toggle('done', i < stateIdx);
+        });
+      }
+    }
+    if (reduceMotion) {
+      pills.forEach((p, i) => p.classList.toggle('done', i < pills.length - 1));
+      pills[pills.length - 1].classList.add('active');
+    } else {
+      setInterval(stepStates, 950);
+    }
+
+    /* ── SCROLL FADE-IN ── */
+    const fadeObserver = new IntersectionObserver(entries => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          entry.target.classList.add('visible');
+          entry.target.querySelectorAll('.count').forEach(animateCount);
+          fadeObserver.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.15 });
+    document.querySelectorAll('.fade').forEach(el => fadeObserver.observe(el));
+  </script>
+</body>
+</html>

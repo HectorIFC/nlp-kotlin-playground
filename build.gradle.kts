@@ -42,7 +42,7 @@ dependencies {
 
     // Logging backend + structured JSON encoder (Fase 5 finalizes the logback.xml wiring).
     implementation("ch.qos.logback:logback-classic:1.5.32")
-    implementation("net.logstash.logback:logstash-logback-encoder:8.1")
+    implementation("net.logstash.logback:logstash-logback-encoder:9.0")
 
     // Serialization (transitively included by Ktor + Mosaic; kept explicit for clarity)
     implementation("org.jetbrains.kotlinx:kotlinx-serialization-json:1.11.0")

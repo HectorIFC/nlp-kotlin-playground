@@ -64,7 +64,7 @@ dependencies {
     implementation("com.zaxxer:HikariCP:6.2.1")
 
     // Queue — RabbitMQ AMQP client.
-    implementation("com.rabbitmq:amqp-client:5.22.0")
+    implementation("com.rabbitmq:amqp-client:5.30.0")
 
     // Blob storage — MinIO S3-compatible client.
     implementation("io.minio:minio:8.5.17")

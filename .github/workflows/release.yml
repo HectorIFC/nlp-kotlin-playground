@@ -28,7 +28,7 @@ jobs:
     name: Version, Tag & Publish Docker Image
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v6
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 0  # full history required for conventional commits parsing
           # persist-credentials is intentionally left at the default: the version
